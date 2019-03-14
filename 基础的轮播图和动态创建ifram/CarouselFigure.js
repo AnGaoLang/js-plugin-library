@@ -1,8 +1,8 @@
 // 无缝轮播
 var CarouselFigure = (function () {
   /**
-   * @param {*外层包裹元素的id} id 
-   * @param {*单个轮播成员的宽} step 
+   * @param {*String} id 外层包裹元素的id
+   * @param {*Number} step 单个轮播成员的宽
    */
   /** 有效的html格式
    * <div id="carsouelOne">
