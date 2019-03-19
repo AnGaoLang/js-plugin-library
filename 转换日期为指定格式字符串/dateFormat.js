@@ -1,6 +1,6 @@
 export class Format {
   constructor () {
-    this.regex = new RegExp(/Y{4}|M{2}|D{2}|h{2}|m{2}|s{2}/g); // YYYY||MM||DD||hh||mm||ss
+    this.regex = new RegExp(/Y{4}|M{2}|D{2}|h{2}|m{2}|s{2}/g);
   }
 
   dateToStr (str) {
@@ -17,13 +17,16 @@ export class Format {
         return day.toString().padStart(2, '0');
       },
       'hh': () => {
-        return this.date.getHours();
+        let hour = this.date.getHours();
+        return hour.toString().padStart(2, '0');
       },
       'mm': () => {
-        return this.date.getMinutes();
+        let minute = this.date.getMinutes();
+        return minute.toString().padStart(2, '0');
       },
       'ss': () => {
-        return this.date.getSeconds();
+        let second = this.date.getSeconds();
+        return second.toString().padStart(2, '0');
       }
     };
     return toString[str]();
