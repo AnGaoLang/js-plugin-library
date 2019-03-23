@@ -79,7 +79,7 @@ function columnToRow (source) {
  * 数值转货币，100.000.00
  * @param {number} num 传入的数值 
  */
-function formatCurrency(num) {
+export function formatCurrency(num) {
   num = num.toString().replace(/\$|\,/g, '');
   if (isNaN(num)) num = "0";
   sign = (num == (num = Math.abs(num)));
@@ -93,4 +93,27 @@ function formatCurrency(num) {
   return (((sign) ? '' : '-') + num + '.' + cents);
 }  
 
-export { formatCurrency }
+/**
+ * 16进制颜色转rgb颜色
+ * @param {string} hex: 16进制颜色 (只支持3个字符和6个字符的16进制颜色模式)
+ */
+function hexToRgb(hex) {
+  // 去除'#'
+  var hex = hex.replace('#', '');
+  var length = hex.length;
+  if (length == 3 || length == 6) {
+    // 3个字符的，拓展为6个字符
+    if (length == 3) {
+      var array = hex.split('');
+      array = array.map(function (item) {
+        return item + item + '';
+      })
+      hex = array.join('');
+    }
+    // 使用正则匹配
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? `(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)})` : null;
+  } else {
+    console.log('输入正确的16进制颜色格式');
+  }
+}
