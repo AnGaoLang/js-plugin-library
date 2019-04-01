@@ -117,3 +117,18 @@ function hexToRgb(hex) {
     console.log('输入正确的16进制颜色格式');
   }
 }
+
+// rgb转rgba
+function rgbToRgba(rgb) {
+    var rgb = rgb;
+    var end = rgb.length - 1;
+    rgb = rgb.slice(4, end);
+    return 'rgba(' + rgb + ', 0.2' + ')';
+}
+// rgba转rgb
+function rgbaTorgb(rgba) {
+    var rgb = rgba;
+    var end = rgb.length - 6;
+    rgb = rgb.slice(5, end);
+    return 'rgb(' + rgb + ')';
+}
