@@ -119,7 +119,7 @@ function hexToRgb(hex) {
 }
 
 // rgb转rgba
-function rgbToRgba(rgb) {
+function rgbTorgba(rgb) {r
     var rgb = rgb;
     var end = rgb.length - 1;
     rgb = rgb.slice(4, end);
