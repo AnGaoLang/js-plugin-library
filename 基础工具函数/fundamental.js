@@ -134,9 +134,10 @@ function rgbaTorgb(rgba) {
 }
 
 // 获取目标节点到页面根节点顶部的距离，递归使用offsetParent获取offsetTop
-function getPageOffsetTop(ele) {
+function getPageOffsetTop(ele, direction) {
+  var dir = 'offset' + dircction.charAt(0).toUpperCase() + dircction.substring(1);
   if(ele.offsetParent) {
-    return getPageOffsetTop(ele.offsetParent) + ele.offsetTop;
+    return getPageOffsetTop(ele.offsetParent, direction) + ele[dir];
   };
   return ele.offsetTop;
 };
