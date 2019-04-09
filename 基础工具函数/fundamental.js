@@ -132,3 +132,11 @@ function rgbaTorgb(rgba) {
     rgb = rgb.slice(5, end);
     return 'rgb(' + rgb + ')';
 }
+
+// 获取目标节点到页面根节点顶部的距离，递归使用offsetParent获取offsetTop
+function getPageOffsetTop(ele) {
+  if(ele.offsetParent) {
+    return getPageOffsetTop(ele.offsetParent) + ele.offsetTop;
+  };
+  return ele.offsetTop;
+};
