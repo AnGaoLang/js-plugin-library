@@ -134,9 +134,28 @@ function rgbaTorgb(rgba) {
 }
 
 // 获取目标节点到页面根节点顶部的距离，递归使用offsetParent获取offsetTop
-function getPageOffsetTop(ele) {
+function getPageOffsetTop(ele, direction) {
+  var dir = 'offset' + dircction.charAt(0).toUpperCase() + direction.substring(1);
   if(ele.offsetParent) {
-    return getPageOffsetTop(ele.offsetParent) + ele.offsetTop;
+    return getPageOffsetTop(ele.offsetParent, direction) + ele[dir];
   };
   return ele.offsetTop;
 };
+
+// 循环对一个数组的数据进行不重复随机抽取
+// 每次随机抽取返回一个数组成员，并依赖全局缓存
+function randomSelection(randomArray, cacheArray) {
+  var returnItem;
+  var index;
+  if (randomArray[0]) {
+    index = Math.floor(Math.random() * randomArray.length);
+    returnItem = randomArray[index];
+    randomArray.splice(index, 1);
+  } else {
+    randomArray = JSON.parse(JSON.stringify(cacheArray));
+    index = Math.floor(Math.random() * randomArray.length);
+    returnItem = randomArray[index];
+    randomArray.splice(index, 1);
+  };
+  return returnItem;
+}
