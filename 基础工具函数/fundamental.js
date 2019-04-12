@@ -141,15 +141,3 @@ function getPageOffsetTop(ele, direction) {
   };
   return ele.offsetTop;
 };
-
-// cookie格式化,字符串转为对象
-function parseCookie(cookie) {
-  var cookieObj = {};
-  if (!cookie) return cookie;
-  var list = cookie.split(';');
-  for(var i = 0; i < cookie.length; i++) {
-    var pair = list[i].split('=');
-    cookieObj[pair[0].trim()] = pair[1];
-  };
-  return cookieObj;
-};
