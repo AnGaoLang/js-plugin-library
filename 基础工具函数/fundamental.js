@@ -172,3 +172,13 @@ function randomSelection(randomArray, cacheArray) {
   };
   return returnItem;
 }
+
+// 数组成员内是否全部相等（仅限原始数据类型）
+function allSame (a) {
+	for(var i =0;i<a.length;i++) {
+		if (a[0] != a[i]) {
+			return false;
+		}
+  }
+  return true;
+};
