@@ -14,7 +14,7 @@ var MyPromise = /** @class */ (function () {
         this[this.rejectValue] = '';
         this.resolve = this.resolve.bind(this);
         this.reject = this.reject.bind(this);
-        // this.then = this.then.bind(this);
+        this.then = this.then.bind(this);
         // this.catch = this.catch.bind(this);
         try {
             fun(this.resolve, this.reject); // 实例化promise时便直接运行传入的函数，此处报错则直接reject
@@ -149,8 +149,9 @@ var MyPromise = /** @class */ (function () {
                 break;
             case 'reject': // 正常的同步调用
                 // 返回一个新的promise，上一个then的两个处理函数返回值若正常都走resolve，错误才走reject
-                setTimeout(function () {
-                    promise = new MyPromise(function (resolve, reject) {
+                // 把setTimeout放在promise外面，将无法正常返回promise，因为setTimeout异步，return promise已经调用完毕。
+                promise = new MyPromise(function (resolve, reject) {
+                    setTimeout(function () {
                         try {
                             var rejectReturn = onReject(_this[_this.rejectValue]);
                             _this.resolvePromise(promise, rejectReturn, resolve, reject);
@@ -189,5 +190,7 @@ module.exports = MyPromise;
 // 当传入promise的异步方法调用完成时，resolve被调用，则从数组中取出缓存的传入then的方法(传入resolve的值是promise的实例属性)，遍历调用。
 // 以此实现promise的异步处理功能
 // new MyPromise((resolve:IfunNoReturn, reject:IfunNoReturn) => {
-//   setTimeout(() => resolve('异步1234'), 1000)
-// }).then((res) => {console.log('同步1234');console.log(res);return {a: 123}});
+//   setTimeout(() => reject('异步1234'), 1000)
+// }).then(function (res) {console.log(res)}, undefined).then(undefined, function (err) {
+//   console.log(err)
+// });
