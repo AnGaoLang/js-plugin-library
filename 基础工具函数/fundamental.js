@@ -182,3 +182,11 @@ function allSame (a) {
   }
   return true;
 };
+
+// 获取url后面的参数
+function getParam(key) {
+  var reg = new RegExp('(^|&)' + key + '=([^&]*)(&|$)', 'i');
+  var param = window.location.search.substring(1).match(reg)[0];
+  param = param.replace(/&/g, '');
+  return unescape(param.split('=')[1]);
+}
