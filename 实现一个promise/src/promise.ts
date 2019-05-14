@@ -3,34 +3,36 @@ type IfunNoReturn = (value:any) => void
 
 type IfunWithReturn = (value:any) => any
 
+type IfunNoParam = () => any
+
 interface IMyPromise {
   (resolve: IfunNoReturn, reject: IfunNoReturn):void
 };
 
 class MyPromise {
-  private value:symbol = Symbol.for('value');
-  private status:symbol = Symbol.for('status');
-  private resolveValue:symbol = Symbol.for('resolveValue');
-  private rejectValue:symbol = Symbol.for('rejectValue');
+  private value:string = '';
+  private status:string = 'pending';
+  private resolveValue:string = '';
+  private rejectValue:string = '';
   //用数组是为了保证在异步时有多次promise.then的情况 
-  public resolveArray:any[] = []; // 为什么这里不给初始化值，转为js该属性会被自动忽略，没有转为this.
-  public rejectArray:any[] = [];
+  private resolveArray:any[] = []; // 为什么这里不给初始化值，转为js该属性会被自动忽略，没有转为this.
+  private rejectArray:any[] = [];
 
   constructor (fun:IMyPromise) {
-    this[this.value] = '';
-    this[this.status] = 'pending';
-    this[this.resolveValue] = '';
-    this[this.rejectValue] = '';
+    // this.value = '';
+    // this.status = 'pending';
+    // this.resolveValue = '';
+    // this.rejectValue = '';
 
-    this.resolve = this.resolve.bind(this);
-    this.reject = this.reject.bind(this);
+    this.InResolve = this.InResolve.bind(this);
+    this.InReject = this.InReject.bind(this);
     this.then = this.then.bind(this);
     // this.catch = this.catch.bind(this);
 
     try {
-      fun(this.resolve, this.reject); // 实例化promise时便直接运行传入的函数，此处报错则直接reject
+      fun(this.InResolve, this.InReject); // 实例化promise时便直接运行传入的函数，此处报错则直接reject
     } catch(e) {
-      this.reject(e);
+      this.InReject(e);
     }
   }
 
@@ -39,12 +41,12 @@ class MyPromise {
    * 所以这里需要将resolve方法的this指向导向当前MyPromise实例
    * @param value resolve后要传递的值
    */
-  protected resolve (value:any):void {
-    if (this[this.status] == 'pending') {
-      this[this.status] = 'resolved';
-      this[this.resolveValue] = value;
+  protected InResolve (value:any):void {
+    if (this.status == 'pending') {
+      this.status = 'resolved';
+      this.resolveValue = value;
       // 异步完成resolve被调用时，遍历调用缓存的传入then的处理函数
-      this.resolveArray.forEach((funItem) => funItem(this[this.resolveValue]));
+      this.resolveArray.forEach((funItem) => funItem(this.resolveValue));
     }
   }
 
@@ -52,12 +54,12 @@ class MyPromise {
    * 
    * @param value reject后要传递的值
    */
-  protected reject (value:any):void {
-    if (this[this.status] == 'pending') {
-      this[this.status] = 'reject';
-      this[this.rejectValue] = value;
+  protected InReject (value:any):void {
+    if (this.status == 'pending') {
+      this.status = 'reject';
+      this.rejectValue = value;
       // 异步完成reject被调用时，遍历调用缓存的传入then的处理函数
-      this.rejectArray.forEach((funItem) => funItem(this[this.rejectValue]));
+      this.rejectArray.forEach((funItem) => funItem(this.rejectValue));
     }
   }
  
@@ -66,19 +68,21 @@ class MyPromise {
     if(promise === thenReturn){
       return reject(new TypeError("禁止返回当前Promise实例，循环引用错误"));
     };
-    let isUsed; // 表示是否调用过成功或者失败
+    let isUsed:boolean; //promise2是否已经resolve 或reject了
     // 当return的是一个对象或者函数
     if (thenReturn !== null && (typeof thenReturn === "object" || typeof thenReturn === "function")) {
       try{
         let then = thenReturn.then;
+        // thenReturn是一个thenable对象或函数，只要有then方法的对象，
         // 当thenReturn上存在then且为函数时，则thenReturn为promise实例，否则只是普通的对象和函数
         if(typeof then === "function"){
           // 处理then方法返回promise的情况，调用thenReturn这个新promise的then方法
-          then.call(thenReturn,(res) => {
+          then.call(thenReturn,(res:IfunWithReturn) => {
+            //如果promise2已经成功或失败了，则不会再处理了
             if(isUsed)return;
             isUsed = true;
             this.resolvePromise(promise,res,resolve,reject);
-          },function(err){
+          },function(err:IfunWithReturn){
             if(isUsed)return;
             isUsed = true;
             reject(err);
@@ -106,14 +110,14 @@ class MyPromise {
     onReject = typeof onReject === 'function' ? onReject : (err) => {throw err};
 
     let promise:MyPromise;
-    switch(this[this.status]){
+    switch(this.status){
       case 'pending': // 异步时，将传入的处理方法推入缓存数组，以待异步完成时，遍历调用
         promise = new MyPromise((resolve:IfunNoReturn, reject:IfunNoReturn) => {
           // resolve
           this.resolveArray.push(() => {
             setTimeout(() => {
               try {
-                let resolveReturn:IfunWithReturn = onResolved(this[this.resolveValue]); // promise内部的值会被传递进resolve并被执行
+                let resolveReturn:IfunWithReturn = onResolved(this.resolveValue); // promise内部的值会被传递进resolve并被执行
                 this.resolvePromise(promise,resolveReturn,resolve,reject);
               } catch(e) {
                 reject(e);
@@ -124,7 +128,7 @@ class MyPromise {
           this.rejectArray.push(() => {
             setTimeout(() => {
               try {
-                let rejectReturn:IfunWithReturn = onReject(this[this.rejectValue]);
+                let rejectReturn:IfunWithReturn = onReject(this.rejectValue);
                 this.resolvePromise(promise,rejectReturn,resolve,reject);
               } catch (e) {
                 reject(e);
@@ -132,14 +136,12 @@ class MyPromise {
             });
           });
         });
-        // this.resolveArray.push(() => onResolved(this[this.resolveValue]));
-        // this.rejectArray.push(() => onReject(this[this.rejectValue]));
       break;
       case 'resolved': // 正常的同步调用
         promise = new MyPromise((resolve:IfunNoReturn, reject:IfunNoReturn) => {
           setTimeout(() => {
             try {
-              let resolveReturn:IfunWithReturn = onResolved(this[this.resolveValue]);
+              let resolveReturn:IfunWithReturn = onResolved(this.resolveValue);
               this.resolvePromise(promise,resolveReturn,resolve,reject);
             } catch(e) {
               reject(e)
@@ -154,7 +156,7 @@ class MyPromise {
           promise = new MyPromise((resolve:IfunNoReturn, reject:IfunNoReturn) => {
             setTimeout(() => {
               try {
-                let rejectReturn:IfunWithReturn =  onReject(this[this.rejectValue]);
+                let rejectReturn:IfunWithReturn =  onReject(this.rejectValue);
                 this.resolvePromise(promise,rejectReturn,resolve,reject);
               } catch(e) {
                 reject(e)
@@ -166,8 +168,71 @@ class MyPromise {
     return promise;
   }
 
+  // catch方法
   public catch (onReject?:IfunWithReturn) {
     return this.then(null, onReject)
+  }
+
+  // finally方法
+  public finally (callback:IfunNoParam) {
+    return this.then(
+      // 执行callback()并将value作为最后的then传递/抛出以 reason 为理由的错误
+      value  => MyPromise.resolve(callback()).then(() => value),
+      reason => MyPromise.resolve(callback()).then(() => { throw reason })
+    )
+  }
+
+  // MyPromise类上的all的静态方法，
+  // 传入一个数组，数组成员全resolve，all才resolve一个数组，若有一个reject，则reject
+  public static all (promises:any) {
+    let array:any[] = [];
+    let count:number = 0;
+    return new MyPromise((resolve, reject) => {
+      for (let i = 0; i < promises.length; i++) {
+        if (!(promises[i] instanceof MyPromise)) {
+          promises[i] = MyPromise.resolve(promises[i]);
+        };
+        promises[i].then((res:any) => {
+          array[i] = res;
+          if (++count == promises.length) {
+            resolve(array);
+          }
+        }, (err:any) => {
+          // 若数组内某一个promise错误，则直接reject
+          reject(err)
+        });
+      }
+    })
+  }
+
+  // MyPromise类上的race的静态方法,传入一个数组，那个成员先resolve/reject，则resolve/reject
+  public static race (promises:any) {
+    return new MyPromise((resolve, reject) => {
+      for (let i = 0; i < promises.length; i++) {
+        if (!(promises[i] instanceof MyPromise)) {
+          promises[i] = MyPromise.resolve(promises[i]);
+        };
+        promises[i].then((res:any) => {
+            resolve(res);
+        }, (err:any) => {
+          reject(err);
+        });
+      }
+    })
+  }
+
+  // MyPromise类上的resolve的静态方法
+  public static resolve (param?:any) {
+    return new MyPromise((resolve, reject) => {
+      resolve(param)
+    })
+  }
+
+  // MyPromise类上的reject的静态方法
+  public static reject (param?:any) {
+    return new MyPromise((resolve, reject) => {
+      reject(param)
+    })
   }
 
   // 执行测试用例需要用到的代码,必须是定义在类上的静态方法
@@ -181,7 +246,10 @@ class MyPromise {
   }
 };
 
-module.exports = MyPromise;
+export default MyPromise;
+// module.exports = MyPromise;
+
+// module.exports = MyPromise;
 // new Promise以及then是同步的，实例化promise时传入的异步方法则会延迟调用。
 // 当then方法本身以及传入then方法的函数已经同步执行完成时，resolve/reject被延迟执行，
 // 因为resolve/reject被延迟执行，promise状态仍是pending，未被改变，then方法在常规实现方法下也无法获取异步方法内resolve传递的值。

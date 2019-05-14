@@ -1,5 +1,5 @@
 var promisesAplusTests = require("promises-aplus-tests");
-var adapter = require("./promise.js");
+var adapter = require("../dist/MPromise.min.js");
 
 // 测试promise
 promisesAplusTests(adapter, function (err) {
