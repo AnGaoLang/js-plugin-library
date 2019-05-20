@@ -181,11 +181,11 @@
 							<div class="my_date_big_box" v-show="isTimeShow" v-bind:class = "{my_date_right:right}">
 								<div class="my_date_month">
 									<div class="my_month_move prevMonth" @click = "clickMonth(-1)">
-										<span class="glyphicon glyphicon-menu-left"></span>
+										<span class="glyphicon glyphicon-menu-left"><</span>
 									</div>
 									<div class="my_month_select my_month_selected" data-change="1">{{currentDate.substring(0,4) + "年" + currentDate.substring(4,6) + "月"}}</div>
 									<div class="my_month_move nextMonth" @click = "clickMonth(1)">
-										<span class="glyphicon glyphicon-menu-right"></span>
+										<span class="glyphicon glyphicon-menu-right">></span>
 									</div>
 								</div>
 								<div class="my_date_week">
@@ -237,9 +237,9 @@
             },
             fixDate:"",				/*当前utc时间。不随事件触发改变，随点击事件改变并给相应日期加上点击样式*/
             nowDate:"",				/*当前utc时间。随事件触发改变*/
-            currentDate:"",			/*当前字符串时间*/
-            date:[],				/*该数组储存整月日历数值*/
-            isTimeShow:false,		/*是否显示日历布尔值*/
+            currentDate:"",		/*当前字符串时间*/
+            date:[],				  /*该数组储存整月日历数值*/
+            isTimeShow:false,	/*是否显示日历布尔值*/
             right:false				/*是否右移布尔值*/
         },
         mounted : function() {
@@ -355,6 +355,14 @@
                 that.dateToggle();
             }
         }
+    },
+    watch: {
+      param: {
+        handler: function (value) {
+          console.log(value)
+        },
+        deep: true
+      }
     }
   })
     </script>
