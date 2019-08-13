@@ -190,3 +190,10 @@ function getParam(key) {
   param = param.replace(/&/g, '');
   return unescape(param.split('=')[1]);
 }
+
+// 取十六进制的反色
+var clorReverse = function (OldColorValue){
+  var OldColorValue="0x"+OldColorValue.replace(/#/g,"");
+  var str="000000"+(0xFFFFFF-OldColorValue).toString(16);
+  return '#' + str.substring(str.length-6,str.length);
+};
