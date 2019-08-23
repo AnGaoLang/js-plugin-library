@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>线边看板</title>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link href="bootstrap/css/bootstrap.css" rel="stylesheet" />
+    <link href="linePanel.css" rel="stylesheet" />
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="linePanel" id="linePanel" v-cloak>
+            <div class="linePanel-item">
+                <div class="tab-content">
+                    <div class="linePanel-item">
+                        <h3 class="page-title darkBlue">生产计划</h3>
+                        <div id="myChart" ref="myChart" v-bind:style="{'width': '100%', 'minHeight': '250px', 'height': (heightNum * 50) + 'px'}"></div>
+                 
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="jquery/jquery.min.js"></script>
+    <script src="bootstrap/js/bootstrap.min.js"></script>
+    <script src="Vue/vue.js"></script>
+    <script src="ECharts/echarts.js"></script>
+    <script>
+        window.onload = function () {
+            var vm = new Vue({
+                el: '#linePanel',
+                data: {
+                    myCharts: null, // eharts
+                    progessAc: [], // 实际
+                    progessPlan: [], // 计划
+                    pauseReason: [], // 暂停原因
+                    heightNum: 10,
+                },
+                mounted: function () {
+                  this.getlinePanelInfo();
+                },
+                methods: {
+                    getlinePanelInfo: function (code) {
+                        self.progessAc = data.Detail.progessAc;
+                        self.progessPlan = data.Detail.progessPlan;
+                        self.pauseReason = data.Detail.pauseReason;
+                        this.renderEcharts(data);
+                    },
+                    renderEcharts: function (data) {
+                        var myChart = document.getElementById('myChart');
+
+                        var clorReverse = function (OldColorValue){
+                          var OldColorValue="0x"+OldColorValue.replace(/#/g,"");
+                          var str="000000"+(0xFFFFFF-OldColorValue).toString(16);
+                          return '#' + str.substring(str.length-6,str.length);
+                        };
+                        var toMinute = function (string) {
+                            var array = string.split(':');
+                            var hour = Number(array[0]);
+                            var minute = Number(array[1]);
+                            return hour * 60 + minute;
+                        };
+                        var toMinuStr = function (num) {
+                            var hour = Math.floor(num / 60);
+                            var minute = num % 60;
+                            hour = hour > 9 ? hour : '0' + hour;
+                            minute = minute > 9 ? minute : '0' + minute;
+                            return hour + ':' + minute;
+                        };
+                        var getProgessAc = function () {
+                            var outArray = [];
+                            var index = 0;
+                            var innerArray = [];
+                            var progessAc = data.Detail.progessAc;
+
+                            var getPauseList = function (acItem) {
+                              var array = [];
+                              if (acItem.pauseList.length > 0) {
+                                acItem.pauseList.forEach(function (item, index) {
+                                  switch (index) {
+                                    case 0:
+                                        var arr = [{
+                                            begin: acItem.begin,
+                                            end: item.begin,
+                                            color: acItem.color,
+                                            qty: acItem.qty,
+                                            pauseList: []
+                                        },{
+                                            begin: item.begin,
+                                            end: item.end,
+                                            color: item.color,
+                                            qty: item.code,
+                                            pauseList: []
+                                        }];
+                                        if (acItem.pauseList.length == 1) {
+                                          arr.push({
+                                            begin: item.end,
+                                            end: acItem.end,
+                                            color: acItem.color,
+                                            qty: acItem.qty,
+                                            pauseList: []
+                                          })
+                                        }
+                                        array = array.concat(arr);
+                                      break;
+                                    case (acItem.pauseList.length - 1):
+                                        if (acItem.pauseList.length > 1) {
+                                            if (item.begin < acItem.pauseList[index - 1].end) {
+                                              array[array.length - 1].end = item.begin;
+                                            };
+                                            var arr = [{
+                                                begin: item.begin,
+                                                end: item.end,
+                                                color: item.color,
+                                                qty: item.code,
+                                                pauseList: []
+                                            },{
+                                                begin: item.end,
+                                                end: acItem.end,
+                                                color: acItem.color,
+                                                qty: acItem.qty,
+                                                pauseList: []
+                                            }];
+                                            array = array.concat(arr);
+                                        };
+                                      break;
+                                    default:
+                                      if (item.begin < acItem.pauseList[index - 1].end) {
+                                        array[array.length - 1].end = item.begin;
+                                        var arr = [{
+                                            begin: item.begin,
+                                            end: item.end,
+                                            color: item.color,
+                                            qty: item.code,
+                                            pauseList: []
+                                        }];
+                                        if (item.end < acItem.pauseList[index + 1].begin) {
+                                          arr.push({
+                                            begin: item.end,
+                                            end: acItem.pauseList[index + 1].begin,
+                                            color: acItem.color,
+                                            qty: acItem.qty,
+                                            pauseList: []
+                                          })
+                                        };
+                                        array = array.concat(arr);
+                                      } else {
+                                        var arr = [{
+                                            begin: item.begin,
+                                            end: item.end,
+                                            color: item.color,
+                                            qty: item.code,
+                                            pauseList: []
+                                        }];
+                                        if (item.end < acItem.pauseList[index + 1].begin) {
+                                          arr.push({
+                                            begin: item.end,
+                                            end: acItem.pauseList[index + 1].begin,
+                                            color: acItem.color,
+                                            qty: acItem.qty,
+                                            pauseList: []
+                                          })
+                                        };
+                                        array = array.concat(arr);
+                                      };
+                                      break;
+                                  };
+                                });
+                                console.log(array)
+                                return array;
+                              } else {
+                                  return acItem
+                              };
+                            };
+
+                            if (toMinute(data.Detail.bc_begin) < toMinute(progessAc[0].begin)) {
+                                innerArray.push({
+                                    begin: data.Detail.bc_begin,
+                                    end: progessAc[0].begin,
+                                    isOpacity: true
+                                });
+                            };
+
+                            if (progessAc.length == 1) {
+                                // innerArray.push(progessAc[index]);
+                                innerArray = innerArray.concat(getPauseList(progessAc[index]));
+                                outArray.push(innerArray);
+                                return outArray;
+                            } else {
+                                for (index; index < progessAc.length; index++) {
+                                    if (index == 0) {
+                                        if (progessAc.length == 1) {
+                                            // innerArray.push(progessAc[index]);
+                                            innerArray = innerArray.concat(getPauseList(progessAc[index]));
+                                            outArray.push(innerArray);
+                                        } else {
+                                          innerArray = innerArray.concat(getPauseList(progessAc[index]));
+                                        };
+                                    } else if (index < progessAc.length - 1) {
+                                        if (toMinute(progessAc[index].begin) < toMinute(progessAc[index - 1].end)) {
+                                            outArray.push(JSON.parse(JSON.stringify(innerArray)));
+                                            progessAc = progessAc.slice(index);
+                                            var start = innerArray[0].begin;
+                                            var end = progessAc[0].begin;
+                                            innerArray = [];
+                                            innerArray[0] = {
+                                                begin: start,
+                                                end: end,
+                                                isOpacity: true
+                                            };
+                                            index = -1;
+                                        } else {
+                                            // innerArray.push(progessAc[index]);
+                                            innerArray = innerArray.concat(getPauseList(progessAc[index]));
+                                        }
+                                    } else {
+                                        if (toMinute(progessAc[index].begin) < toMinute(progessAc[index - 1].end)) {
+                                            outArray.push(JSON.parse(JSON.stringify(innerArray)));
+                                            progessAc = progessAc.slice(index);
+                                            var start = innerArray[0].begin;
+                                            var end = progessAc[0].begin;
+                                            innerArray = [];
+                                            innerArray[0] = {
+                                                begin: start,
+                                                end: end,
+                                                isOpacity: true
+                                            };
+                                            index = -1;
+                                        } else {
+                                            // innerArray.push(progessAc[index]);
+                                            innerArray = innerArray.concat(getPauseList(progessAc[index]));
+                                            outArray.push(innerArray);
+                                        };
+                                    }
+                                };
+                                return outArray;
+                            }
+                        };
+                        var renderGraphic = function (splitNum) {
+                            var copyPauseReason = JSON.parse(JSON.stringify(data.Detail.pauseReason));
+                            var optionGraphic = [];
+                            var pauseReason = [];
+                            for (var i = 0; i < Math.ceil(copyPauseReason.length / splitNum); i++) {
+                                pauseReason.push(copyPauseReason.splice(0, splitNum));
+                                i--;
+                            };
+                            var getGraphicTotal = function (array, start, init) {
+                                if (array.length == 0) return 0;
+                                var total = init; 
+                                for (var i = start; i < array.length; i++ ) {
+                                  total = total + array[0].children[0].shape.width;
+                                }
+                                return total;
+                            };
+
+                            pauseReason.forEach(function (item, index) {
+                                item.forEach(function (innerItem, innerIndex) {
+                                    var top = 5;
+                                    var left = 15;
+                                    var height = 30;
+                                    var text = innerItem.code + ':' + innerItem.desc;
+
+                                    var graphic = {
+                                        type: 'group',
+                                        left: left,
+                                        top: top,
+                                        children: [
+                                            {
+                                                type: 'rect',
+                                                z: 100,
+                                                top: 'center',
+                                                left: 'center',
+                                                shape: {
+                                                    width: text.length * 13,
+                                                    height: height
+                                                },
+                                                style: {
+                                                    fill: innerItem.color,
+                                                }
+                                            },
+                                            {
+                                                type: 'text',
+                                                top: 'middle',
+                                                left: 'center',
+                                                z: '100',
+                                                style: {
+                                                    text: text,
+                                                    fontSize: 14,
+                                                    fill: clorReverse(innerItem.color)
+                                                }
+                                            }
+                                        ]
+                                    }
+
+                                    var graphicTotal = getGraphicTotal(optionGraphic, index * splitNum , 0);
+                                    // console.log(graphicTotal)
+                                    graphic.top = (top * (index + 1)) + (index * height);
+                                    graphic.left = graphicTotal + (left * innerIndex);
+
+                                    optionGraphic.push(graphic);
+                                });
+                            });
+                            return optionGraphic;
+                        }
+
+                        var option = {
+                            grid: {
+                                top: '120',
+                                left: '0',
+                                right: '3%',
+                                bottom: '5%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'value',
+                                maxInterval: 60,
+                                max: function (value) {
+                                  var currentMax = toMinute(data.Detail.bc_end) - toMinute(data.Detail.bc_begin);
+                                  if (value.max > currentMax)  {
+                                    return value.max
+                                  } else {
+                                    return currentMax
+                                  }
+                                },
+                                splitLine: {
+                                    show: false,
+                                },
+                                axisLine: {
+                                    lineStyle: {
+                                        color: '#1D92B6',
+                                    }
+                                },
+                                axisTick: {
+                                    inside: true
+                                },
+                                axisLabel: {
+                                    fontSize: '18',
+                                    color: '#1D92B6',
+                                    formatter: function (value, index) {
+                                        var startTime = toMinute(data.Detail.bc_begin);
+                                        if (value == 0) {
+                                            return data.Detail.bc_begin
+                                        } else {
+                                            return toMinuStr(startTime + 60 * index)
+                                        }
+                                    }
+                                }
+                            },
+                            yAxis: {
+                                type: 'category',
+                                inverse: true,
+                                data: ['计划：', '实际：'],
+                                axisLine: {
+                                    show: false
+                                },
+                                axisTick: {
+                                    show: false
+                                },
+                                axisLabel: {
+                                    fontSize: '18',
+                                    color: '#1D92B6',
+                                    formatter: function (value) {
+                                        var value = value != 'undefined' ? value : '';
+                                        return value;
+                                    }
+                                }
+                            },
+                            series: [],
+                            graphic: []
+                        };
+
+                        var totalTime = toMinute(data.Detail.bc_end) - toMinute(data.Detail.bc_begin);
+                        var progessPArray = data.Detail.progessPlan;
+                        var planArray = [];
+                        progessPArray.forEach(function (item, index) {
+                          if (index == 0 && (toMinute(item.begin) > toMinute(data.Detail.bc_begin))) {
+                            planArray.push({
+                              "wo": "",
+                              "color": "transparent",
+                              "planId": "",
+                              "qty": "",
+                              "planHour": 0,
+                              "begin": data.Detail.bc_begin,
+                              "end": item.begin
+                            });
+                          };
+                          if (index && (toMinute(item.begin) > toMinute(progessPArray[index - 1].end))) {
+                            planArray.push({
+                              "wo": "",
+                              "color": "transparent",
+                              "planId": "",
+                              "qty": "",
+                              "planHour": 0,
+                              "begin": progessPArray[index - 1].end,
+                              "end": item.begin
+                            });
+                          }
+                          planArray.push(item);
+                        });
+                        planArray.forEach(function (item) {
+                            option.series.push({
+                                stack: '总计划',
+                                type: "bar",
+                                label: {
+                                    normal: {
+                                        show: true,
+                                        position: 'inside'
+                                    }
+                                },
+                                data: [{
+                                    value: toMinute(item.end) - toMinute(item.begin),
+                                    label: {
+                                        formatter: function () {
+                                            return item.qty
+                                        },
+                                        offset: [0, 2],
+                                        fontSize: '18',
+                                        color: clorReverse(item.color),
+                                        verticalAlign: 'middle'
+                                    },
+                                    itemStyle: {
+                                        normal: {
+                                            color: item.color
+                                        }
+                                    }
+                                }]
+                            })
+                        });
+                        if (data.Detail.progessAc.length > 0) {
+                            var yAxisArray = getProgessAc();
+                            var maxSeriesArray = [];
+                            var maxSeries;
+                            yAxisArray.forEach(function (item) {
+                              maxSeriesArray.push(item.length);
+                            });
+                            maxSeries = Math.max.apply(null, maxSeriesArray);
+                            if (maxSeries > option.series.length) {
+                              var seriesLength = option.series.length;
+                              for (var i = 0; i < maxSeries - seriesLength; i++) {
+                                option.series.push({
+                                    stack: '总计划',
+                                    type: "bar",
+                                    label: {
+                                        normal: {
+                                            show: true,
+                                            position: 'inside'
+                                        }
+                                    },
+                                    data: [{
+                                        value: 0,
+                                        label: {
+                                            formatter: function () {
+                                                return ''
+                                            },
+                                            offset: [0, 2],
+                                            fontSize: '18',
+                                            color: 'transparent',
+                                            verticalAlign: 'middle'
+                                        },
+                                        itemStyle: {
+                                            normal: {
+                                                color: 'transparent'
+                                            }
+                                        }
+                                    }]
+                                })
+                              }
+                            };
+                            if (yAxisArray.length >= 2) {
+                                option.yAxis.data.length = yAxisArray.length + 1;
+                            };
+                            option.series.forEach(function (item, index) {
+                                  // console.log(item)
+                                  for (let i = 0; i < yAxisArray.length; i++) {
+                                      if (yAxisArray[i][index]) {
+                                          if (yAxisArray[i][index].isOpacity) {
+                                              item.data[i + 1] = {
+                                                  value: toMinute(yAxisArray[i][index].end) - toMinute(yAxisArray[i][index].begin),
+                                                  label: {
+                                                      show: false
+                                                  },
+                                                  itemStyle: {
+                                                      normal: {
+                                                          color: 'transparent'
+                                                      }
+                                                  }
+                                              }
+                                          } else {
+                                              var value = toMinute(yAxisArray[i][index].end) - toMinute(yAxisArray[i][index].begin);
+                                              item.data[i + 1] = {
+                                                  value: value,
+                                                  label: {
+                                                      formatter: function () {
+                                                          return yAxisArray[i][index].qty
+                                                      },
+                                                      offset: [0, 2],
+                                                      fontSize: value > 20 ? '16' : '12',
+                                                      color: clorReverse(yAxisArray[i][index].color),
+                                                      verticalAlign: 'middle'
+                                                  },
+                                                  itemStyle: {
+                                                      normal: {
+                                                          color: yAxisArray[i][index].color,
+                                                          borderWidth: yAxisArray[i][index].IsOutTime ? '5' : '0',
+                                                          borderColor: clorReverse(yAxisArray[i][index].color),
+                                                      },
+                                                      emphasis: {
+                                                          borderWidth: yAxisArray[i][index].IsOutTime ? '5' : '0',
+                                                          borderColor: clorReverse(yAxisArray[i][index].color),
+                                                      }
+                                                  }
+                                              };
+                                          }
+                                      } else {
+                                          item.data[i + 1] = '';
+                                      };
+                                }
+                            });
+                        };
+                        
+                        var graphicNum = 12;
+                        option.graphic = renderGraphic(graphicNum);
+                        option.grid.top = Math.ceil(option.graphic.length / graphicNum) * 40;
+
+                        this.myChart = echarts.init(myChart)
+                        this.heightNum = option.series[0].data.length;
+                        this.$nextTick(function () {
+                          that.myChart.resize()
+                        });
+                        console.log(option)
+                        this.myChart.setOption(option);
+                        var that = this;
+                        window.onresize = function () {
+                            that.myChart.resize()
+                        }
+                    }
+                },
+            })
+        }
+        var data = {
+              "errcode": 0,
+              "WC": [
+                  {
+                      "name": "压装",
+                      "code": "KC3A01YZ"
+                  },
+                  {
+                      "name": "中线",
+                      "code": "KC3A01ZX"
+                  },
+                  {
+                      "name": "小线",
+                      "code": "KC3A012XX"
+                  }
+              ],
+              "Detail": {
+                  "code": "KC3A01ZX",
+                  "bc_begin": "08:00",
+                  "bc_end": "18:00",
+                  "title": {
+                      "wocount": 4,
+                      "wocount_ac": 0,
+                      "qty": 18,
+                      "qty_ac": 2,
+                      "totalHour": 600,
+                      "totalHour_ac": 1000
+                  },
+                  "details": [
+                      {
+                          "PlanDate": "2019-08-08",
+                          "WO": "0000235990",
+                          "Stock": "7806721|K泵安装套件包",
+                          "BeginTime": "11:21:19",
+                          "EndTime": "00:00:00",
+                          "PlanHour": 2,
+                          "AcHour": 19.83,
+                          "IsOutTime": true,
+                          "PlanQty": 4,
+                          "AcQty": 2,
+                          "StatusCode": 2,
+                          "Status": "生产中",
+                          "Remark": ""
+                      },
+                      {
+                          "PlanDate": "2019-08-08",
+                          "WO": "0000638782",
+                          "Stock": "4960400|油室",
+                          "BeginTime": "00:00:00",
+                          "EndTime": "00:00:00",
+                          "PlanHour": 2,
+                          "AcHour": 0,
+                          "IsOutTime": false,
+                          "PlanQty": 5,
+                          "AcQty": 0,
+                          "StatusCode": 1,
+                          "Status": "待生产",
+                          "Remark": ""
+                      },
+                      {
+                          "PlanDate": "2019-08-08",
+                          "WO": "0000638724",
+                          "Stock": "4960400|油室",
+                          "BeginTime": "00:00:00",
+                          "EndTime": "00:00:00",
+                          "PlanHour": 2,
+                          "AcHour": 0,
+                          "IsOutTime": false,
+                          "PlanQty": 4,
+                          "AcQty": 0,
+                          "StatusCode": 1,
+                          "Status": "待生产",
+                          "Remark": ""
+                      },
+                      {
+                          "PlanDate": "2019-08-08",
+                          "WO": "0000638644",
+                          "Stock": "4645404|轴承座",
+                          "BeginTime": "00:00:00",
+                          "EndTime": "00:00:00",
+                          "PlanHour": 2,
+                          "AcHour": 0,
+                          "IsOutTime": false,
+                          "PlanQty": 5,
+                          "AcQty": 0,
+                          "StatusCode": 1,
+                          "Status": "待生产",
+                          "Remark": ""
+                      }
+                  ],
+                  "progessPlan": [
+                      {
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "planId": "WK0700000195",
+                          "qty": 1,
+                          "planHour": 50,
+                          "begin": "08:00",
+                          "end": "09:00"
+                      },
+                      {
+                          "wo": "0000638782",
+                          "color": "#0066cc",
+                          "planId": "WK0700000196",
+                          "qty": 2,
+                          "planHour": 60,
+                          "begin": "09:00",
+                          "end": "09:10"
+                      },
+                      {
+                          "wo": "0000638724",
+                          "color": "#ffcccc",
+                          "planId": "WK0700000197",
+                          "qty": 3,
+                          "planHour": 50,
+                          "begin": "09:20",
+                          "end": "09:50"
+                      },
+                      {
+                          "wo": "0000638644",
+                          "color": "#ffcccc",
+                          "planId": "WK0700000198",
+                          "qty": 4,
+                          "planHour": 240,
+                          "begin": "09:50",
+                          "end": "11:00"
+                      },
+                      {
+                          "wo": "0000638782",
+                          "color": "#0066cc",
+                          "planId": "WK0700000196",
+                          "qty": 5,
+                          "planHour": 200,
+                          "begin": "11:50",
+                          "end": "13:00"
+                      },
+                      {
+                          "wo": "0000638724",
+                          "color": "#ffcccc",
+                          "planId": "WK0700000197",
+                          "qty": 6,
+                          "planHour": 180,
+                          "begin": "13:00",
+                          "end": "14:00"
+                      },
+                      {
+                          "wo": "0000638644",
+                          "color": "#ffcccc",
+                          "planId": "WK0700000198",
+                          "qty": 7,
+                          "planHour": 240,
+                          "begin": "14:40",
+                          "end": "15:00"
+                      },
+                      {
+                          "wo": "0000638644",
+                          "color": "#ffcccc",
+                          "planId": "WK0700000198",
+                          "qty": 8,
+                          "planHour": 640,
+                          "begin": "15:40",
+                          "end": "17:00"
+                      }
+                  ],
+                  "progessAc": [
+                      {
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "begin": "8:00",
+                          "end": "10:55",
+                          "qty": 2,
+                          "pauseList": [{
+                            "begin": "8:10",
+                            "end": "8:20",
+                            color: '#ffcccc',
+                            code: 'a2'
+                          }
+                          ,{
+                            "begin": "8:30",
+                            "end": "8:45",
+                            color: '#ccc',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "8:40",
+                            "end": "8:50",
+                            color: '#333',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "8:45",
+                            "end": "8:50",
+                            color: '#d9d9',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "8:55",
+                            "end": "9:00",
+                            color: '#a22',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "8:55",
+                            "end": "9:00",
+                            color: '#a22',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "9:05",
+                            "end": "9:10",
+                            color: '#a22',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "9:15",
+                            "end": "9:25",
+                            color: '#a22',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "9:30",
+                            "end": "9:35",
+                            color: '#a22',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "9:33",
+                            "end": "9:40",
+                            color: '#a22',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "9:45",
+                            "end": "9:50",
+                            color: '#a22',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "10:00",
+                            "end": "10:10",
+                            color: '#a22',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "10:20",
+                            "end": "10:30",
+                            color: '#a22',
+                            code: 'a2'
+                          },
+                          {
+                            "begin": "10:25",
+                            "end": "10:40",
+                            color: '#a22',
+                            code: 'a2'
+                          }
+                        ]
+                      },
+                      {
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "begin": "9:25",
+                          "end": "10:25",
+                          "qty": 2,
+                          "pauseList": [
+                          ]
+                      },
+                      {
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "begin": "10:21",
+                          "end": "11:25",
+                          "qty": 2,
+                          "pauseList": [
+                          {
+                            "begin": "10:25",
+                            "end": "10:40",
+                            color: '#a22',
+                            code: 'a2'
+                          },{
+                            "begin": "10:30",
+                            "end": "10:55",
+                            color: '#a22',
+                            code: 'a2'
+                          }
+                          ]
+                      },
+                      {
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "begin": "11:21",
+                          "end": "12:25",
+                          "qty": 2,
+                          "pauseList": [
+                          ]
+                      },
+                      {
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "begin": "12:21",
+                          "end": "13:25",
+                          "qty": 2,
+                          "pauseList": [
+                          ]
+                      },{
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "begin": "13:21",
+                          "end": "14:25",
+                          "qty": 2,
+                          "pauseList": [
+                          ]
+                      },{
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "begin": "14:21",
+                          "end": "15:25",
+                          "qty": 2,
+                          "pauseList": [
+                          ]
+                      },
+                  ],
+                  "pauseReason": [
+                      {
+                          "code": "R1",
+                          "desc": "暂无原因",
+                          "color": "#330033"
+                      }
+                      , {
+                          "code": "R2",
+                          "desc": "暂无原因",
+                          "color": "#330033"
+                      }, {
+                          "code": "R2",
+                          "desc": "暂无原因",
+                          "color": "#330033"
+                      },
+                      
+                  ],
+                  "draw": {
+                      "uw": 1.7066666666666668,
+                      "fillrec": [
+                          {
+                              "w": 1286,
+                              "h": 24,
+                              "x": 343,
+                              "y": 30,
+                              "color": "#ffff99"
+                          }
+                      ],
+                      "text": [
+                          {
+                              "x": 983,
+                              "y": 34,
+                              "text": "2.000",
+                              "size": 16
+                          }
+                      ],
+                      "line": []
+                  }
+              }
+            }
+    </script>
+</body>
+
+</html>
