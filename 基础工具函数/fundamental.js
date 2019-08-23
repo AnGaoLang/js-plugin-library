@@ -192,8 +192,16 @@ function getParam(key) {
 }
 
 // 取十六进制的反色
-var clorReverse = function (OldColorValue){
+function clorReverse (OldColorValue){
   var OldColorValue="0x"+OldColorValue.replace(/#/g,"");
   var str="000000"+(0xFFFFFF-OldColorValue).toString(16);
   return '#' + str.substring(str.length-6,str.length);
+};
+
+// 模板字符串
+// template：'<input type="${type}" name="${name}" id="${id}"/>'
+// data = { type: type, name: item.id + '_' + inputIndex };
+// input = temString(input, inputData);
+function temString(template, data) {
+  return template.replace(/\$\{(.*?)\}/g, (match, $1) => data[$1.trim()]); // $1依次匹配子表达式 (.*?)
 };
