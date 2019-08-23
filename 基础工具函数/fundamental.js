@@ -183,14 +183,6 @@ function allSame (a) {
   return true;
 };
 
-// 获取url后面的参数
-function getParam(key) {
-  var reg = new RegExp('(^|&)' + key + '=([^&]*)(&|$)', 'i');
-  var param = window.location.search.substring(1).match(reg)[0];
-  param = param.replace(/&/g, '');
-  return unescape(param.split('=')[1]);
-}
-
 // 取十六进制的反色
 function clorReverse (OldColorValue){
   var OldColorValue="0x"+OldColorValue.replace(/#/g,"");
@@ -205,3 +197,63 @@ function clorReverse (OldColorValue){
 function temString(template, data) {
   return template.replace(/\$\{(.*?)\}/g, (match, $1) => data[$1.trim()]); // $1依次匹配子表达式 (.*?)
 };
+
+// 获取url后面的参数
+function getParam (key) {
+  var obj = {};
+  var searchArray = decodeURIComponent(window.location.search).slice(1).split('&');
+  searchArray.forEach(function (item) {
+    var array = item.split('=');
+    obj[array[0]] = array[1];
+  });
+  if (key) {
+    return obj[key]
+  } else {
+    return obj
+  }
+}
+
+function getParam(key) {
+  var reg = new RegExp('(^|&)' + key + '=([^&]*)(&|$)', 'i');
+  var param = window.location.search.substring(1).match(reg)[0];
+  param = param.replace(/&/g, '');
+  return unescape(param.split('=')[1]);
+}
+
+function getQueryString(name) {
+  var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+  var r = window.location.search.substr(1).match(reg);
+  if (r != null) return decodeURI(r[2]); return null;
+};
+
+//传入经纬度计算距离
+function distance(la1, lo1, la2, lo2) {
+  if (!la1 || !lo1 || !la2 || !lo2) {
+    return "";
+  }
+  var La1 = la1 * Math.PI / 180.0;
+  var La2 = la2 * Math.PI / 180.0;
+  var La3 = La1 - La2;
+  var Lb3 = lo1 * Math.PI / 180.0 - lo2 * Math.PI / 180.0;
+  var s = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(La3 / 2), 2) + Math.cos(La1) * Math.cos(La2) * Math.pow(Math.sin(Lb3 / 2), 2)));
+  s = s * 6378.137; //地球半径
+  s = Math.round(s * 10000) / 10000;
+  return s
+  // console.log("计算结果",s)
+}
+
+// 对象转url参数
+function urlEncode(param, key, encode) {
+  if (param == null) return '';
+  var paramStr = '';
+  var t = typeof(param);
+  if (t == 'string' || t == 'number' || t == 'boolean') {
+    paramStr += '&' + key + '=' + ((encode == null || encode) ? encodeURIComponent(param) : param);
+  } else {
+    for (var i in param) {
+      var k = key == null ? i : key + (param instanceof Array ? '[' + i + ']' : '.' + i)
+      paramStr += urlEncode(param[i], k, encode)
+    }
+  }
+  return paramStr;
+}
