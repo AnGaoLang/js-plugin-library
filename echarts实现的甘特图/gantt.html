@@ -20,7 +20,7 @@
                 <div class="tab-content">
                     <div class="linePanel-item">
                         <h3 class="page-title darkBlue">生产计划</h3>
-                        <div id="myChart" ref="myChart" v-bind:style="{'width': '100%', 'minHeight': '250px', 'height': (heightNum * 50) + 'px'}"></div>
+                        <div id="myChart" ref="myChart" v-bind:style="{'width': '100%', 'height': (graphicHeight + 10 + (heightNum * 65)) + 'px'}"></div>
                  
                     </div>
                 </div>
@@ -527,9 +527,10 @@
                         var graphicNum = 12;
                         option.graphic = renderGraphic(graphicNum);
                         option.grid.top = Math.ceil(option.graphic.length / graphicNum) * 40;
+                        this.graphicHeight = option.grid.top;
 
                         this.myChart = echarts.init(myChart)
-                        this.heightNum = option.series[0].data.length;
+                        this.heightNum = option.series[0].data.length  >= 2 ? option.series[0].data.length: 2;
                         this.$nextTick(function () {
                           that.myChart.resize()
                         });
@@ -870,16 +871,6 @@
                           "desc": "暂无原因",
                           "color": "#330033"
                       }
-                      , {
-                          "code": "R2",
-                          "desc": "暂无原因",
-                          "color": "#330033"
-                      }, {
-                          "code": "R2",
-                          "desc": "暂无原因",
-                          "color": "#330033"
-                      },
-                      
                   ],
                   "draw": {
                       "uw": 1.7066666666666668,
