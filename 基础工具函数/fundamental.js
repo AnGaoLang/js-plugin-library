@@ -93,6 +93,13 @@ export function formatCurrency(num) {
   return (((sign) ? '' : '-') + num + '.' + cents);
 }  
 
+
+// ["#4682b4", "#934554", "#cda0a8", "#696969", "#ca8604", "#9932cc", "#046570", "#ff7f50", "#173c1a", "#3cb371", 
+//  "#4b0082", "#ff8c00", "#001464", "#ff45ff", "#5e8b22", "#00ced1", "#2f4f6b", "#808000", "#b22222", "#32cd32", 
+//  "#1e90ff", "#d48265", "#800000", "#ba55d3", "#5f9ea0", "#dc143c", "#c71585", "#8b668b", "#008b00", "#d2691e", 
+//  "#0000ff", "#ff1493", "#7b1086", "#ff0000", "#db7093", "#000000", "#faebd7", "#c0ff3e", "#00ffff", "#98fb98", 
+//  "#ff69b4", "#c1ffc1", "#bebebe", "#b0e0e6", "#ffff00", "#00ff7f", "#deb887", "#87cefa", "#ffa07a", "#ffdead", 
+//  "#7fffd4", "#ffd700", "#e066ff", "#7cfc00", "#ffb6c1", "#40e0d0", "#eed2ee", "#dda0dd", "#00ff00"]
 /**
  * 16进制颜色转rgb颜色
  * @param {string} hex: 16进制颜色 (只支持3个字符和6个字符的16进制颜色模式)
@@ -116,6 +123,17 @@ function hexToRgb(hex) {
   } else {
     console.log('输入正确的16进制颜色格式');
   }
+}
+
+// rgb转16进制
+function colorRGB2Hex(color) {
+  var rgb = color.split(',');
+  var r = parseInt(rgb[0].split('(')[1]);
+  var g = parseInt(rgb[1]);
+  var b = parseInt(rgb[2].split(')')[0]);
+
+  var hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  return hex;
 }
 
 // rgb转rgba
