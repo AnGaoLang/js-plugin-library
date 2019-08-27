@@ -275,3 +275,17 @@ function urlEncode(param, key, encode) {
   }
   return paramStr;
 }
+
+// 毫秒转换为天、时、分、秒
+function toTimeCount(start, end) {
+  start = new Date(start).getTime();
+  end = new Date(end).getTime();
+  var diffTime = parseInt((end - start) / 1000);
+  var difDay = parseInt(diffTime / 60 / 60 / 24);
+  diffTime = diffTime - (difDay * 60 * 60 * 24);
+  var difHour = parseInt(diffTime / 60 / 60);
+  diffTime = diffTime - (difHour * 60 * 60);
+  var difSecond = parseInt(diffTime / 60);
+  diffTime = diffTime - (difSecond * 60);
+  return '倒计时：' + difDay + '天' + difHour + '时' + difSecond + '分' + diffTime + '秒';
+}
