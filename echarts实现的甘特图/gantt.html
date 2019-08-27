@@ -20,7 +20,8 @@
                 <div class="tab-content">
                     <div class="linePanel-item">
                         <h3 class="page-title darkBlue">生产计划</h3>
-                        <div id="myChart" ref="myChart" v-bind:style="{'width': '100%', 'height': (graphicHeight + 10 + (heightNum * 65)) + 'px'}"></div>
+                        <!-- 动态渲染图表高度： graphic的高度 + 20预留高度 + y轴刻度的数量 -->
+                        <div id="myChart" ref="myChart" v-bind:style="{'width': '100%', 'height': (graphicHeight + 20 + (heightNum * 30)) + 'px'}"></div>
                  
                     </div>
                 </div>
@@ -41,6 +42,7 @@
                     progessPlan: [], // 计划
                     pauseReason: [], // 暂停原因
                     heightNum: 10,
+                    graphicHeight: 0,
                 },
                 mounted: function () {
                   this.getlinePanelInfo();
@@ -52,20 +54,40 @@
                         self.pauseReason = data.Detail.pauseReason;
                         this.renderEcharts(data);
                     },
+                    // data数组的长度 等于 y轴刻度的数量
+                    // series数组的长度 等于 每一行堆叠的柱状图的数量
                     renderEcharts: function (data) {
+                        var startHour = Number(data.Detail.bc_begin.split(':')[0]); // 计划开始时间的小时数
+                        var startMinute = Number(data.Detail.bc_begin.split(':')[1]); // 计划开始时间的分钟数
                         var myChart = document.getElementById('myChart');
 
+                        // 颜色取反
                         var clorReverse = function (OldColorValue){
-                          var OldColorValue="0x"+OldColorValue.replace(/#/g,"");
-                          var str="000000"+(0xFFFFFF-OldColorValue).toString(16);
-                          return '#' + str.substring(str.length-6,str.length);
+                          if (OldColorValue == '' || OldColorValue == 'transparent') return OldColorValue;
+                          var hex = OldColorValue ? OldColorValue.replace('#', '') : '';
+                          if (length == 3) {
+                            var array = hex.split('');
+                            array = array.map(function (item) {
+                              return item + item + '';
+                            })
+                            hex = array.join('');
+                          };
+                          var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                          var red = parseInt(result[1], 16);
+                          var green = parseInt(result[2], 16);
+                          var black = parseInt(result[3], 16);
+                          var gratLight = (0.299 * red + 0.587 * green + 0.114 * black) / 255;
+                          return gratLight > 0.5 ? '#333' : '#fff';
                         };
+
+                        // 时间刻度转换为分钟数值，然后以分钟数值差，堆叠柱状图
                         var toMinute = function (string) {
                             var array = string.split(':');
                             var hour = Number(array[0]);
                             var minute = Number(array[1]);
                             return hour * 60 + minute;
                         };
+                        // 将分钟转换为时间刻度
                         var toMinuStr = function (num) {
                             var hour = Math.floor(num / 60);
                             var minute = num % 60;
@@ -73,18 +95,25 @@
                             minute = minute > 9 ? minute : '0' + minute;
                             return hour + ':' + minute;
                         };
+                        // 对实际工单进行拆分换行，并插入暂停时间
                         var getProgessAc = function () {
                             var outArray = [];
                             var index = 0;
                             var innerArray = [];
                             var progessAc = data.Detail.progessAc;
 
+                            // 插入暂停时间，传入单个工单的对象
                             var getPauseList = function (acItem) {
                               var array = [];
+                              // 如果有暂停时间
                               if (acItem.pauseList.length > 0) {
                                 acItem.pauseList.forEach(function (item, index) {
                                   switch (index) {
                                     case 0:
+                                        // 第一个暂停时间， 拆分为以下几个时间段
+                                        // 1: 实际工单开始时间 -- 暂停开始时间
+                                        // 2： 暂停开始时间 -- 暂停结束时间
+                                        // 3： 如果只有一个暂停时间点，则 暂停结束时间 -- 实际工单结束时间
                                         var arr = [{
                                             begin: acItem.begin,
                                             end: item.begin,
@@ -107,13 +136,18 @@
                                             pauseList: []
                                           })
                                         }
-                                        array = array.concat(arr);
+                                        array = array.concat(arr); // 推入最终数组
                                       break;
                                     case (acItem.pauseList.length - 1):
                                         if (acItem.pauseList.length > 1) {
+                                            // 最后一个暂停时间，且暂停时间数量大于一， 拆分为以下几个时间段
+                                            // 1: 暂停开始时间 -- 暂停结束时间
+                                            // 暂停结束时间 -- 实际工单的结束时间
                                             if (item.begin < acItem.pauseList[index - 1].end) {
-                                              array[array.length - 1].end = item.begin;
+                                              // 如果当前暂停点的开始时间 小于 上一个暂停点的结束时间
+                                              array[array.length - 1].end = item.begin; // 则将上个暂停点的结束时间，改为当前暂停点的开始时间
                                             };
+                                            // 
                                             var arr = [{
                                                 begin: item.begin,
                                                 end: item.end,
@@ -127,12 +161,16 @@
                                                 qty: acItem.qty,
                                                 pauseList: []
                                             }];
-                                            array = array.concat(arr);
+                                            array = array.concat(arr); // 推入最终数组
                                         };
                                       break;
                                     default:
+                                      // 多个暂停，非一个和最后一个
+                                      // 如果当前暂停点的开始时间 小于 上一个暂停点的结束时间
                                       if (item.begin < acItem.pauseList[index - 1].end) {
+                                        // 用当前暂停点的开始时间 覆盖 上个暂停点的结束时间
                                         array[array.length - 1].end = item.begin;
+                                        // 推入数组，当前暂停点的开始时间 - 结束时间
                                         var arr = [{
                                             begin: item.begin,
                                             end: item.end,
@@ -140,7 +178,9 @@
                                             qty: item.code,
                                             pauseList: []
                                         }];
+                                        // 如果当前暂停点的结束时间 小于 下一个暂停点的结束时间
                                         if (item.end < acItem.pauseList[index + 1].begin) {
+                                          // 推入数组，当前暂停点的开始时间 -- 下个暂停点的开始时间
                                           arr.push({
                                             begin: item.end,
                                             end: acItem.pauseList[index + 1].begin,
@@ -149,8 +189,9 @@
                                             pauseList: []
                                           })
                                         };
-                                        array = array.concat(arr);
+                                        array = array.concat(arr); // 推入最终数组
                                       } else {
+                                        // 推入数组，当前暂停点的开始时间 -- 结束时间
                                         var arr = [{
                                             begin: item.begin,
                                             end: item.end,
@@ -158,7 +199,9 @@
                                             qty: item.code,
                                             pauseList: []
                                         }];
+                                        // 如果当前暂停点的结束时间 小于 下一个暂停点的结束时间
                                         if (item.end < acItem.pauseList[index + 1].begin) {
+                                          // 推入数组，当前暂停点的开始时间 -- 下个暂停点的开始时间
                                           arr.push({
                                             begin: item.end,
                                             end: acItem.pauseList[index + 1].begin,
@@ -167,31 +210,33 @@
                                             pauseList: []
                                           })
                                         };
-                                        array = array.concat(arr);
+                                        array = array.concat(arr); // 推入最终数组
                                       };
                                       break;
                                   };
                                 });
                                 console.log(array)
-                                return array;
+                                return array; // 返回拆分实际工单，并插入暂停时间的最终数组
                               } else {
-                                  return acItem
+                                  return acItem // 如果没有暂停点，则返回原始的实际工单
                               };
                             };
 
+                            // 如果第一个实际工单的开始时间 大于 计划的开始时间，则使用空白柱状图代替
                             if (toMinute(data.Detail.bc_begin) < toMinute(progessAc[0].begin)) {
                                 innerArray.push({
-                                    begin: data.Detail.bc_begin,
-                                    end: progessAc[0].begin,
+                                    begin: data.Detail.bc_begin, // 计划的开始时间
+                                    end: progessAc[0].begin, // 实际工单的开始时间
                                     isOpacity: true
                                 });
                             };
 
+                            // 如果只有一个实际工单
                             if (progessAc.length == 1) {
                                 // innerArray.push(progessAc[index]);
-                                innerArray = innerArray.concat(getPauseList(progessAc[index]));
-                                outArray.push(innerArray);
-                                return outArray;
+                                innerArray = innerArray.concat(getPauseList(progessAc[index])); // 插入暂停点，并推入数组
+                                outArray.push(innerArray); // 一个二维数组
+                                return outArray; // 返回处理后的实际工单
                             } else {
                                 for (index; index < progessAc.length; index++) {
                                     if (index == 0) {
@@ -242,6 +287,8 @@
                                 return outArray;
                             }
                         };
+
+                        // 渲染Graphic， 上方的暂停原因
                         var renderGraphic = function (splitNum) {
                             var copyPauseReason = JSON.parse(JSON.stringify(data.Detail.pauseReason));
                             var optionGraphic = [];
@@ -307,8 +354,23 @@
                                 });
                             });
                             return optionGraphic;
-                        }
+                        };
 
+                        // 当堆叠柱状图设置了min值时，每一个堆叠的柱状图都会受到min属性的影响，以min为最低数值，
+                        // 为了消除影响，需要给每个柱状图的值加上min属性值，图表才能正常显示，不会出现min大小数值的部分图表被隐藏的情况
+                        // 但是实际的value和max却随之增加了 min * 堆叠柱状图数量 的值。故计算实际的max，需要减去 startMinute * length
+                        // 重写max的函数
+                        var getMaxFunc = function (length) {
+                          return function (value) {
+                              var startTime = toMinute(startHour + ':00');
+                              var currentMax = toMinute(data.Detail.bc_end) - startTime;
+                              if ((value.max - (startMinute * length))  > currentMax)  {
+                                return value.max // 图表中实际数据的最大值
+                              } else {
+                                return currentMax // 计划中的最大值
+                              }
+                          }
+                        };
                         var option = {
                             grid: {
                                 top: '120',
@@ -320,14 +382,8 @@
                             xAxis: {
                                 type: 'value',
                                 maxInterval: 60,
-                                max: function (value) {
-                                  var currentMax = toMinute(data.Detail.bc_end) - toMinute(data.Detail.bc_begin);
-                                  if (value.max > currentMax)  {
-                                    return value.max
-                                  } else {
-                                    return currentMax
-                                  }
-                                },
+                                min: startMinute, // 根据计划开始时间，设置x轴的起点。即和整点相差的分钟数
+                                max: '',
                                 splitLine: {
                                     show: false,
                                 },
@@ -343,11 +399,11 @@
                                     fontSize: '18',
                                     color: '#1D92B6',
                                     formatter: function (value, index) {
-                                        var startTime = toMinute(data.Detail.bc_begin);
-                                        if (value == 0) {
-                                            return data.Detail.bc_begin
+                                        var startTime = toMinute(startHour + ':00'); // 计划开始时间的整点
+                                        if (index == 0) {
+                                            return data.Detail.bc_begin // 第一个x轴刻度，显示计划开始时间
                                         } else {
-                                            return toMinuStr(startTime + 60 * index)
+                                          return toMinuStr(startTime + 60 * index) // 整点label
                                         }
                                     }
                                 }
@@ -366,7 +422,7 @@
                                     fontSize: '18',
                                     color: '#1D92B6',
                                     formatter: function (value) {
-                                        var value = value != 'undefined' ? value : '';
+                                        var value = value != 'undefined' ? value : ''; // undefined替换为''
                                         return value;
                                     }
                                 }
@@ -376,21 +432,25 @@
                         };
 
                         var totalTime = toMinute(data.Detail.bc_end) - toMinute(data.Detail.bc_begin);
-                        var progessPArray = data.Detail.progessPlan;
-                        var planArray = [];
+                        var progessPArray = data.Detail.progessPlan;  // 计划工单数组
+                        var planArray = []; // 处理过空白时间的计划工单数组
                         progessPArray.forEach(function (item, index) {
+                          // 第一个计划工单 且 计划工单的开始时间 大于 计划的开始时间，则将这段时间差替换为透明柱状图
                           if (index == 0 && (toMinute(item.begin) > toMinute(data.Detail.bc_begin))) {
+                            // 构造空白时间推入数组
                             planArray.push({
                               "wo": "",
                               "color": "transparent",
                               "planId": "",
                               "qty": "",
                               "planHour": 0,
-                              "begin": data.Detail.bc_begin,
-                              "end": item.begin
+                              "begin": data.Detail.bc_begin, // 计划的开始时间
+                              "end": item.begin // 计划工单的开始时间
                             });
                           };
+                          // 非第一个计划工单 且 当前计划工单的开始时间 大于 下一个计划工单的开始时间。
                           if (index && (toMinute(item.begin) > toMinute(progessPArray[index - 1].end))) {
+                            // 构造空白时间推入数组
                             planArray.push({
                               "wo": "",
                               "color": "transparent",
@@ -401,12 +461,14 @@
                               "end": item.begin
                             });
                           }
-                          planArray.push(item);
+                          planArray.push(item); // 当前计划工单推入数组
                         });
+                        // 遍历处理过空白时间的计划工单数组,生成 series 配置项
                         planArray.forEach(function (item) {
                             option.series.push({
                                 stack: '总计划',
                                 type: "bar",
+                                barWidth: 30,
                                 label: {
                                     normal: {
                                         show: true,
@@ -414,34 +476,40 @@
                                     }
                                 },
                                 data: [{
-                                    value: toMinute(item.end) - toMinute(item.begin),
+                                    value: toMinute(item.end) - toMinute(item.begin)  + startMinute, // 每一个柱状图加上min属性值
                                     label: {
                                         formatter: function () {
-                                            return item.qty
+                                            return item.qty // 柱状图内的标签
                                         },
                                         offset: [0, 2],
                                         fontSize: '18',
-                                        color: clorReverse(item.color),
+                                        color: clorReverse(item.color), // 取反色
                                         verticalAlign: 'middle'
                                     },
                                     itemStyle: {
                                         normal: {
-                                            color: item.color
+                                            color: item.color // 柱状图的颜色
                                         }
                                     }
                                 }]
                             })
                         });
+                        // 如果实际工单存在
                         if (data.Detail.progessAc.length > 0) {
-                            var yAxisArray = getProgessAc();
+                            var yAxisArray = getProgessAc(); // 获取经理处理的实际工单的数组
+                            // 根据 yAxisArray，获取每一个y轴刻度堆叠的最多柱状图的数量
+                            // （因为暂停点，实际工单的堆叠柱状图数量有可能大于计划工单的数量）
                             var maxSeriesArray = [];
                             var maxSeries;
                             yAxisArray.forEach(function (item) {
                               maxSeriesArray.push(item.length);
                             });
                             maxSeries = Math.max.apply(null, maxSeriesArray);
+                            // 如果 某一行实际工单柱状图的数量 大于 计划工单柱状图的数量
+                            // 则依据差额，向 option.serie 添加相应数量的配置项
                             if (maxSeries > option.series.length) {
                               var seriesLength = option.series.length;
+                              // 依据最大值差额，添加 series
                               for (var i = 0; i < maxSeries - seriesLength; i++) {
                                 option.series.push({
                                     stack: '总计划',
@@ -472,16 +540,18 @@
                                 })
                               }
                             };
+                            // 如果实际工单需要换行的数量大于2，则相应的改变 y 轴刻度的数量
                             if (yAxisArray.length >= 2) {
                                 option.yAxis.data.length = yAxisArray.length + 1;
                             };
+                            // 遍历 option.series，构造相应的 data
                             option.series.forEach(function (item, index) {
                                   // console.log(item)
                                   for (let i = 0; i < yAxisArray.length; i++) {
                                       if (yAxisArray[i][index]) {
                                           if (yAxisArray[i][index].isOpacity) {
                                               item.data[i + 1] = {
-                                                  value: toMinute(yAxisArray[i][index].end) - toMinute(yAxisArray[i][index].begin),
+                                                  value: toMinute(yAxisArray[i][index].end) - toMinute(yAxisArray[i][index].begin) + startMinute,
                                                   label: {
                                                       show: false
                                                   },
@@ -492,7 +562,7 @@
                                                   }
                                               }
                                           } else {
-                                              var value = toMinute(yAxisArray[i][index].end) - toMinute(yAxisArray[i][index].begin);
+                                              var value = toMinute(yAxisArray[i][index].end) - toMinute(yAxisArray[i][index].begin) + startMinute;
                                               item.data[i + 1] = {
                                                   value: value,
                                                   label: {
@@ -523,22 +593,24 @@
                                 }
                             });
                         };
-                        
-                        var graphicNum = 12;
-                        option.graphic = renderGraphic(graphicNum);
-                        option.grid.top = Math.ceil(option.graphic.length / graphicNum) * 40;
-                        this.graphicHeight = option.grid.top;
+                        option.xAxis.max = getMaxFunc(option.series.length); // 复写 xAxis.max
 
-                        this.myChart = echarts.init(myChart)
-                        this.heightNum = option.series[0].data.length  >= 2 ? option.series[0].data.length: 2;
-                        this.$nextTick(function () {
-                          that.myChart.resize()
-                        });
-                        console.log(option)
+                        var graphicNum = 12; // 上方 graphic 需要换行的最大数量
+                        option.graphic = renderGraphic(graphicNum); // 生成 option.graphic 配置项
+                        // 依据 graphic 需要换行次数，动态渲染图表上方给 graphic 预留的高度
+                        option.grid.top = Math.ceil(option.graphic.length / graphicNum) * 40;
+
+                        // 用于动态渲染整个图表的高度
+                        this.graphicHeight = option.grid.top;
+                        this.heightNum = option.yAxis.data.length; // y轴的刻度数量，最小为2
+
+                        this.myChart = echarts.init(myChart) // 初始表格
                         this.myChart.setOption(option);
-                        var that = this;
-                        window.onresize = function () {
-                            that.myChart.resize()
+                        this.$nextTick(() => {
+                          this.myChart.resize()
+                        });
+                        window.onresize = () => {
+                            this.myChart.resize()
                         }
                     }
                 },
@@ -709,161 +781,203 @@
                       }
                   ],
                   "progessAc": [
-                      {
+                       {
                           "wo": "0000235990",
                           "color": "#ffff99",
                           "begin": "8:00",
-                          "end": "10:55",
+                          "end": "8:30",
                           "qty": 2,
-                          "pauseList": [{
-                            "begin": "8:10",
-                            "end": "8:20",
-                            color: '#ffcccc',
-                            code: 'a2'
-                          }
-                          ,{
-                            "begin": "8:30",
-                            "end": "8:45",
-                            color: '#ccc',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "8:40",
-                            "end": "8:50",
-                            color: '#333',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "8:45",
-                            "end": "8:50",
-                            color: '#d9d9',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "8:55",
-                            "end": "9:00",
-                            color: '#a22',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "8:55",
-                            "end": "9:00",
-                            color: '#a22',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "9:05",
-                            "end": "9:10",
-                            color: '#a22',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "9:15",
-                            "end": "9:25",
-                            color: '#a22',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "9:30",
-                            "end": "9:35",
-                            color: '#a22',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "9:33",
-                            "end": "9:40",
-                            color: '#a22',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "9:45",
-                            "end": "9:50",
-                            color: '#a22',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "10:00",
-                            "end": "10:10",
-                            color: '#a22',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "10:20",
-                            "end": "10:30",
-                            color: '#a22',
-                            code: 'a2'
-                          },
-                          {
-                            "begin": "10:25",
-                            "end": "10:40",
-                            color: '#a22',
-                            code: 'a2'
-                          }
-                        ]
+                          "pauseList": [
+                          ]
                       },
                       {
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "begin": "8:25",
+                          "end": "8:50",
+                          "qty": 2,
+                          "pauseList": [
+                          ]
+                      },{
+                          "wo": "0000235990",
+                          "color": "#ffff99",
+                          "begin": "8:45",
+                          "end": "9:30",
+                          "qty": 2,
+                          "pauseList": [
+                          ]
+                      },{
                           "wo": "0000235990",
                           "color": "#ffff99",
                           "begin": "9:25",
-                          "end": "10:25",
-                          "qty": 2,
-                          "pauseList": [
-                          ]
-                      },
-                      {
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "begin": "10:21",
-                          "end": "11:25",
-                          "qty": 2,
-                          "pauseList": [
-                          {
-                            "begin": "10:25",
-                            "end": "10:40",
-                            color: '#a22',
-                            code: 'a2'
-                          },{
-                            "begin": "10:30",
-                            "end": "10:55",
-                            color: '#a22',
-                            code: 'a2'
-                          }
-                          ]
-                      },
-                      {
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "begin": "11:21",
-                          "end": "12:25",
-                          "qty": 2,
-                          "pauseList": [
-                          ]
-                      },
-                      {
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "begin": "12:21",
-                          "end": "13:25",
+                          "end": "9:50",
                           "qty": 2,
                           "pauseList": [
                           ]
                       },{
                           "wo": "0000235990",
                           "color": "#ffff99",
-                          "begin": "13:21",
-                          "end": "14:25",
-                          "qty": 2,
-                          "pauseList": [
-                          ]
-                      },{
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "begin": "14:21",
-                          "end": "15:25",
+                          "begin": "9:45",
+                          "end": "10:50",
                           "qty": 2,
                           "pauseList": [
                           ]
                       },
+                      // {
+                      //     "wo": "0000235990",
+                      //     "color": "#ffff99",
+                      //     "begin": "8:00",
+                      //     "end": "10:55",
+                      //     "qty": 2,
+                      //     "pauseList": [{
+                      //       "begin": "8:10",
+                      //       "end": "8:20",
+                      //       color: '#ffcccc',
+                      //       code: 'a2'
+                      //     }
+                      //     ,{
+                      //       "begin": "8:30",
+                      //       "end": "8:45",
+                      //       color: '#ccc',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "8:40",
+                      //       "end": "8:50",
+                      //       color: '#333',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "8:45",
+                      //       "end": "8:50",
+                      //       color: '#d9d9',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "8:55",
+                      //       "end": "9:00",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "8:55",
+                      //       "end": "9:00",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "9:05",
+                      //       "end": "9:10",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "9:15",
+                      //       "end": "9:25",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "9:30",
+                      //       "end": "9:35",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "9:33",
+                      //       "end": "9:40",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "9:45",
+                      //       "end": "9:50",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "10:00",
+                      //       "end": "10:10",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "10:20",
+                      //       "end": "10:30",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },
+                      //     {
+                      //       "begin": "10:25",
+                      //       "end": "10:40",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     }
+                      //   ]
+                      // },
+                      // {
+                      //     "wo": "0000235990",
+                      //     "color": "#ffff99",
+                      //     "begin": "9:25",
+                      //     "end": "10:25",
+                      //     "qty": 2,
+                      //     "pauseList": [
+                      //     ]
+                      // },
+                      // {
+                      //     "wo": "0000235990",
+                      //     "color": "#ffff99",
+                      //     "begin": "10:21",
+                      //     "end": "11:25",
+                      //     "qty": 2,
+                      //     "pauseList": [
+                      //     {
+                      //       "begin": "10:25",
+                      //       "end": "10:40",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     },{
+                      //       "begin": "10:30",
+                      //       "end": "10:55",
+                      //       color: '#a22',
+                      //       code: 'a2'
+                      //     }
+                      //     ]
+                      // },
+                      // {
+                      //     "wo": "0000235990",
+                      //     "color": "#ffff99",
+                      //     "begin": "11:21",
+                      //     "end": "12:25",
+                      //     "qty": 2,
+                      //     "pauseList": [
+                      //     ]
+                      // },
+                      // {
+                      //     "wo": "0000235990",
+                      //     "color": "#ffff99",
+                      //     "begin": "12:21",
+                      //     "end": "13:25",
+                      //     "qty": 2,
+                      //     "pauseList": [
+                      //     ]
+                      // },{
+                      //     "wo": "0000235990",
+                      //     "color": "#ffff99",
+                      //     "begin": "13:21",
+                      //     "end": "14:25",
+                      //     "qty": 2,
+                      //     "pauseList": [
+                      //     ]
+                      // },{
+                      //     "wo": "0000235990",
+                      //     "color": "#ffff99",
+                      //     "begin": "14:21",
+                      //     "end": "15:25",
+                      //     "qty": 2,
+                      //     "pauseList": [
+                      //     ]
+                      // },
                   ],
                   "pauseReason": [
                       {
