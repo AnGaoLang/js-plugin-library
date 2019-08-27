@@ -21,7 +21,7 @@
                     <div class="linePanel-item">
                         <h3 class="page-title darkBlue">生产计划</h3>
                         <!-- 动态渲染图表高度： graphic的高度 + 20预留高度 + y轴刻度的数量 -->
-                        <div id="myChart" ref="myChart" v-bind:style="{'width': '100%', 'height': (graphicHeight + 20 + (heightNum * 30)) + 'px'}"></div>
+                        <div id="myChart" ref="myChart" v-bind:style="{'width': '100%', 'height': (graphicHeight + 20 + (heightNum * 45)) + 'px'}"></div>
                  
                     </div>
                 </div>
@@ -468,7 +468,7 @@
                             option.series.push({
                                 stack: '总计划',
                                 type: "bar",
-                                barWidth: 30,
+                                barWidth: 35,
                                 label: {
                                     normal: {
                                         show: true,
@@ -482,7 +482,7 @@
                                             return item.qty // 柱状图内的标签
                                         },
                                         offset: [0, 2],
-                                        fontSize: '18',
+                                        fontSize: '16',
                                         color: clorReverse(item.color), // 取反色
                                         verticalAlign: 'middle'
                                     },
@@ -578,11 +578,11 @@
                                                       normal: {
                                                           color: yAxisArray[i][index].color,
                                                           borderWidth: yAxisArray[i][index].IsOutTime ? '5' : '0',
-                                                          borderColor: clorReverse(yAxisArray[i][index].color),
+                                                          borderColor: 'red',
                                                       },
                                                       emphasis: {
                                                           borderWidth: yAxisArray[i][index].IsOutTime ? '5' : '0',
-                                                          borderColor: clorReverse(yAxisArray[i][index].color),
+                                                          borderColor: 'red',
                                                       }
                                                   }
                                               };

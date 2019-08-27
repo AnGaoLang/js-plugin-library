@@ -151,6 +151,37 @@ function rgbaTorgb(rgba) {
     return 'rgb(' + rgb + ')';
 }
 
+// 取十六进制的反色
+function clorReverse (OldColorValue){
+  var OldColorValue="0x"+OldColorValue.replace(/#/g,"");
+  var str="000000"+(0xFFFFFF-OldColorValue).toString(16);
+  return '#' + str.substring(str.length-6,str.length);
+};
+
+/**
+ * 
+ * @param {*string rgb颜色} OldColorValue 
+ * 根据 灰度/亮度 公式，依据给定颜色，反白色或黑色
+ */
+var clorReverse = function (color){
+  if (!color) return '';
+  if (color == '' || color == 'transparent') return color;
+  var hex = color;
+  if (length == 3) {
+    var array = hex.split('');
+    array = array.map(function (item) {
+      return item + item + '';
+    })
+    hex = array.join('');
+  };
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  var red = parseInt(result[1], 16);
+  var green = parseInt(result[2], 16);
+  var black = parseInt(result[3], 16);
+  var gratLight = (0.299 * red + 0.587 * green + 0.114 * black) / 255;
+  return gratLight > 0.5 ? '#333' : '#fff';
+};
+
 // 获取目标节点到页面根节点顶部的距离，递归使用offsetParent获取offsetTop
 function getPageOffsetTop(ele, direction) {
   var dir = 'offset' + direction.charAt(0).toUpperCase() + direction.substring(1);
@@ -199,13 +230,6 @@ function allSame (a) {
 		}
   }
   return true;
-};
-
-// 取十六进制的反色
-function clorReverse (OldColorValue){
-  var OldColorValue="0x"+OldColorValue.replace(/#/g,"");
-  var str="000000"+(0xFFFFFF-OldColorValue).toString(16);
-  return '#' + str.substring(str.length-6,str.length);
 };
 
 // 模板字符串
