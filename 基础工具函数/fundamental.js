@@ -106,7 +106,8 @@ export function formatCurrency(num) {
  */
 function hexToRgb(hex) {
   // 去除'#'
-  var hex = hex.replace('#', '');
+  if (hex == '' || hex == 'transparent') return hex;
+  var hex = hex ? hex.replace('#', '') : '';
   var length = hex.length;
   if (length == 3 || length == 6) {
     // 3个字符的，拓展为6个字符

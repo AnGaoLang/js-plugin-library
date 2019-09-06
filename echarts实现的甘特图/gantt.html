@@ -21,7 +21,7 @@
                     <div class="linePanel-item">
                         <h3 class="page-title darkBlue">生产计划</h3>
                         <!-- 动态渲染图表高度： graphic的高度 + 20预留高度 + y轴刻度的数量 -->
-                        <div id="myChart" ref="myChart" v-bind:style="{'width': '100%', 'height': (graphicHeight + 20 + (heightNum * 45)) + 'px'}"></div>
+                        <div id="myChart" ref="myChart" v-bind:style="{'width': '100%', 'height': (graphicHeight + 20 + (heightNum * 35)) + 'px'}"></div>
                  
                     </div>
                 </div>
@@ -32,6 +32,7 @@
     <script src="bootstrap/js/bootstrap.min.js"></script>
     <script src="Vue/vue.js"></script>
     <script src="ECharts/echarts.js"></script>
+    <script src="./data.js"></script>
     <script>
         window.onload = function () {
             var vm = new Vue({
@@ -49,10 +50,10 @@
                 },
                 methods: {
                     getlinePanelInfo: function (code) {
-                        self.progessAc = data.Detail.progessAc;
-                        self.progessPlan = data.Detail.progessPlan;
-                        self.pauseReason = data.Detail.pauseReason;
-                        this.renderEcharts(data);
+                        self.progessAc = data1.Detail.progessAc;
+                        self.progessPlan = data1.Detail.progessPlan;
+                        self.pauseReason = data1.Detail.pauseReason;
+                        this.renderEcharts(data1);
                     },
                     // data数组的长度 等于 y轴刻度的数量
                     // series数组的长度 等于 每一行堆叠的柱状图的数量
@@ -60,12 +61,14 @@
                         var startHour = Number(data.Detail.bc_begin.split(':')[0]); // 计划开始时间的小时数
                         var startMinute = Number(data.Detail.bc_begin.split(':')[1]); // 计划开始时间的分钟数
                         var myChart = document.getElementById('myChart');
+                        
+                        var progessPArray = data.Detail.progessPlan;
 
                         // 颜色取反
                         var clorReverse = function (OldColorValue){
                           if (OldColorValue == '' || OldColorValue == 'transparent') return OldColorValue;
                           var hex = OldColorValue ? OldColorValue.replace('#', '') : '';
-                          if (length == 3) {
+                          if (hex.length == 3) {
                             var array = hex.split('');
                             array = array.map(function (item) {
                               return item + item + '';
@@ -104,6 +107,15 @@
 
                             // 插入暂停时间，传入单个工单的对象
                             var getPauseList = function (acItem) {
+                              // 只分一个时间刻度
+                              // if (acItem.split) {
+                              //   acItem.pauseList = [{
+                              //     begin: acItem.split,
+                              //     end: acItem.split,
+                              //     color: '#fff',
+                              //     code: ''
+                              //   }];
+                              // };
                               var array = [];
                               // 如果有暂停时间
                               if (acItem.pauseList.length > 0) {
@@ -117,6 +129,8 @@
                                         var arr = [{
                                             begin: acItem.begin,
                                             end: item.begin,
+                                            IsOutTime: acItem.IsOutTime, // 超时红色边框
+                                            IsOnTime: acItem.IsOnTime,  // 按时绿色边框 都为false则给白色
                                             color: acItem.color,
                                             qty: acItem.qty,
                                             pauseList: []
@@ -131,8 +145,11 @@
                                           arr.push({
                                             begin: item.end,
                                             end: acItem.end,
+                                            IsOutTime: acItem.IsOutTime,
+                                            IsOnTime: acItem.IsOnTime,
                                             color: acItem.color,
                                             qty: acItem.qty,
+                                            // qty: '暂停',
                                             pauseList: []
                                           })
                                         }
@@ -151,12 +168,15 @@
                                             var arr = [{
                                                 begin: item.begin,
                                                 end: item.end,
+                                                noboder: true,
                                                 color: item.color,
                                                 qty: item.code,
                                                 pauseList: []
                                             },{
                                                 begin: item.end,
                                                 end: acItem.end,
+                                                IsOutTime: acItem.IsOutTime,
+                                                IsOnTime: acItem.IsOnTime,
                                                 color: acItem.color,
                                                 qty: acItem.qty,
                                                 pauseList: []
@@ -174,6 +194,7 @@
                                         var arr = [{
                                             begin: item.begin,
                                             end: item.end,
+                                            noboder: true,
                                             color: item.color,
                                             qty: item.code,
                                             pauseList: []
@@ -184,6 +205,8 @@
                                           arr.push({
                                             begin: item.end,
                                             end: acItem.pauseList[index + 1].begin,
+                                            IsOutTime: acItem.IsOutTime,
+                                            IsOnTime: acItem.IsOnTime,
                                             color: acItem.color,
                                             qty: acItem.qty,
                                             pauseList: []
@@ -195,6 +218,7 @@
                                         var arr = [{
                                             begin: item.begin,
                                             end: item.end,
+                                            noboder: true,
                                             color: item.color,
                                             qty: item.code,
                                             pauseList: []
@@ -205,6 +229,8 @@
                                           arr.push({
                                             begin: item.end,
                                             end: acItem.pauseList[index + 1].begin,
+                                            IsOutTime: acItem.IsOutTime,
+                                            IsOnTime: acItem.IsOnTime,
                                             color: acItem.color,
                                             qty: acItem.qty,
                                             pauseList: []
@@ -351,6 +377,18 @@
                                     graphic.left = graphicTotal + (left * innerIndex);
 
                                     optionGraphic.push(graphic);
+
+                                    // 最后添加一个graph， 计划的结束时间
+                                    if (index == pauseReason.length - 1 && innerIndex == item.length - 1) {
+                                      var lastGraphic = JSON.parse(JSON.stringify(graphic));
+                                      lastGraphic.children[0].shape.width = 110;
+                                      lastGraphic.children[0].style.fill = '#000';
+                                      lastGraphic.children[1].style.text = '预计' + progessPArray[progessPArray.length - 1].end +'结束';
+                                      lastGraphic.children[1].style.fill = '#fff';
+                                      var lastgraphicTotal = getGraphicTotal(optionGraphic, index * splitNum , 0);
+                                      lastGraphic.left = lastgraphicTotal + (left * (innerIndex + 1));
+                                      optionGraphic.push(lastGraphic);
+                                    }
                                 });
                             });
                             return optionGraphic;
@@ -468,7 +506,7 @@
                             option.series.push({
                                 stack: '总计划',
                                 type: "bar",
-                                barWidth: 35,
+                                barWidth: 25,
                                 label: {
                                     normal: {
                                         show: true,
@@ -563,6 +601,11 @@
                                               }
                                           } else {
                                               var value = toMinute(yAxisArray[i][index].end) - toMinute(yAxisArray[i][index].begin) + startMinute;
+                                              var borderColor = '#fff'; // 既不超时，又不按时，则默认给白色
+                                              var borderWidth = '3';
+                                              yAxisArray[i][index].IsOnTime && (borderColor = 'green');
+                                              yAxisArray[i][index].IsOutTime && (borderColor = 'red');
+                                              yAxisArray[i][index].noboder && (borderWidth = '0');
                                               item.data[i + 1] = {
                                                   value: value,
                                                   label: {
@@ -571,18 +614,19 @@
                                                       },
                                                       offset: [0, 2],
                                                       fontSize: value > 20 ? '16' : '12',
+                                                      // fontSize: value > 20 ? (yAxisArray[i][index].qty == '暂停' ? '13' : '16') : '12',
                                                       color: clorReverse(yAxisArray[i][index].color),
                                                       verticalAlign: 'middle'
                                                   },
                                                   itemStyle: {
                                                       normal: {
                                                           color: yAxisArray[i][index].color,
-                                                          borderWidth: yAxisArray[i][index].IsOutTime ? '5' : '0',
-                                                          borderColor: 'red',
+                                                          borderWidth: borderWidth,
+                                                          borderColor: borderColor,
                                                       },
                                                       emphasis: {
-                                                          borderWidth: yAxisArray[i][index].IsOutTime ? '5' : '0',
-                                                          borderColor: 'red',
+                                                          borderWidth: borderWidth,
+                                                          borderColor: borderColor,
                                                       }
                                                   }
                                               };
@@ -616,399 +660,6 @@
                 },
             })
         }
-        var data = {
-              "errcode": 0,
-              "WC": [
-                  {
-                      "name": "压装",
-                      "code": "KC3A01YZ"
-                  },
-                  {
-                      "name": "中线",
-                      "code": "KC3A01ZX"
-                  },
-                  {
-                      "name": "小线",
-                      "code": "KC3A012XX"
-                  }
-              ],
-              "Detail": {
-                  "code": "KC3A01ZX",
-                  "bc_begin": "08:00",
-                  "bc_end": "18:00",
-                  "title": {
-                      "wocount": 4,
-                      "wocount_ac": 0,
-                      "qty": 18,
-                      "qty_ac": 2,
-                      "totalHour": 600,
-                      "totalHour_ac": 1000
-                  },
-                  "details": [
-                      {
-                          "PlanDate": "2019-08-08",
-                          "WO": "0000235990",
-                          "Stock": "7806721|K泵安装套件包",
-                          "BeginTime": "11:21:19",
-                          "EndTime": "00:00:00",
-                          "PlanHour": 2,
-                          "AcHour": 19.83,
-                          "IsOutTime": true,
-                          "PlanQty": 4,
-                          "AcQty": 2,
-                          "StatusCode": 2,
-                          "Status": "生产中",
-                          "Remark": ""
-                      },
-                      {
-                          "PlanDate": "2019-08-08",
-                          "WO": "0000638782",
-                          "Stock": "4960400|油室",
-                          "BeginTime": "00:00:00",
-                          "EndTime": "00:00:00",
-                          "PlanHour": 2,
-                          "AcHour": 0,
-                          "IsOutTime": false,
-                          "PlanQty": 5,
-                          "AcQty": 0,
-                          "StatusCode": 1,
-                          "Status": "待生产",
-                          "Remark": ""
-                      },
-                      {
-                          "PlanDate": "2019-08-08",
-                          "WO": "0000638724",
-                          "Stock": "4960400|油室",
-                          "BeginTime": "00:00:00",
-                          "EndTime": "00:00:00",
-                          "PlanHour": 2,
-                          "AcHour": 0,
-                          "IsOutTime": false,
-                          "PlanQty": 4,
-                          "AcQty": 0,
-                          "StatusCode": 1,
-                          "Status": "待生产",
-                          "Remark": ""
-                      },
-                      {
-                          "PlanDate": "2019-08-08",
-                          "WO": "0000638644",
-                          "Stock": "4645404|轴承座",
-                          "BeginTime": "00:00:00",
-                          "EndTime": "00:00:00",
-                          "PlanHour": 2,
-                          "AcHour": 0,
-                          "IsOutTime": false,
-                          "PlanQty": 5,
-                          "AcQty": 0,
-                          "StatusCode": 1,
-                          "Status": "待生产",
-                          "Remark": ""
-                      }
-                  ],
-                  "progessPlan": [
-                      {
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "planId": "WK0700000195",
-                          "qty": 1,
-                          "planHour": 50,
-                          "begin": "08:00",
-                          "end": "09:00"
-                      },
-                      {
-                          "wo": "0000638782",
-                          "color": "#0066cc",
-                          "planId": "WK0700000196",
-                          "qty": 2,
-                          "planHour": 60,
-                          "begin": "09:00",
-                          "end": "09:10"
-                      },
-                      {
-                          "wo": "0000638724",
-                          "color": "#ffcccc",
-                          "planId": "WK0700000197",
-                          "qty": 3,
-                          "planHour": 50,
-                          "begin": "09:20",
-                          "end": "09:50"
-                      },
-                      {
-                          "wo": "0000638644",
-                          "color": "#ffcccc",
-                          "planId": "WK0700000198",
-                          "qty": 4,
-                          "planHour": 240,
-                          "begin": "09:50",
-                          "end": "11:00"
-                      },
-                      {
-                          "wo": "0000638782",
-                          "color": "#0066cc",
-                          "planId": "WK0700000196",
-                          "qty": 5,
-                          "planHour": 200,
-                          "begin": "11:50",
-                          "end": "13:00"
-                      },
-                      {
-                          "wo": "0000638724",
-                          "color": "#ffcccc",
-                          "planId": "WK0700000197",
-                          "qty": 6,
-                          "planHour": 180,
-                          "begin": "13:00",
-                          "end": "14:00"
-                      },
-                      {
-                          "wo": "0000638644",
-                          "color": "#ffcccc",
-                          "planId": "WK0700000198",
-                          "qty": 7,
-                          "planHour": 240,
-                          "begin": "14:40",
-                          "end": "15:00"
-                      },
-                      {
-                          "wo": "0000638644",
-                          "color": "#ffcccc",
-                          "planId": "WK0700000198",
-                          "qty": 8,
-                          "planHour": 640,
-                          "begin": "15:40",
-                          "end": "17:00"
-                      }
-                  ],
-                  "progessAc": [
-                       {
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "begin": "8:00",
-                          "end": "8:30",
-                          "qty": 2,
-                          "pauseList": [
-                          ]
-                      },
-                      {
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "begin": "8:25",
-                          "end": "8:50",
-                          "qty": 2,
-                          "pauseList": [
-                          ]
-                      },{
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "begin": "8:45",
-                          "end": "9:30",
-                          "qty": 2,
-                          "pauseList": [
-                          ]
-                      },{
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "begin": "9:25",
-                          "end": "9:50",
-                          "qty": 2,
-                          "pauseList": [
-                          ]
-                      },{
-                          "wo": "0000235990",
-                          "color": "#ffff99",
-                          "begin": "9:45",
-                          "end": "10:50",
-                          "qty": 2,
-                          "pauseList": [
-                          ]
-                      },
-                      // {
-                      //     "wo": "0000235990",
-                      //     "color": "#ffff99",
-                      //     "begin": "8:00",
-                      //     "end": "10:55",
-                      //     "qty": 2,
-                      //     "pauseList": [{
-                      //       "begin": "8:10",
-                      //       "end": "8:20",
-                      //       color: '#ffcccc',
-                      //       code: 'a2'
-                      //     }
-                      //     ,{
-                      //       "begin": "8:30",
-                      //       "end": "8:45",
-                      //       color: '#ccc',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "8:40",
-                      //       "end": "8:50",
-                      //       color: '#333',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "8:45",
-                      //       "end": "8:50",
-                      //       color: '#d9d9',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "8:55",
-                      //       "end": "9:00",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "8:55",
-                      //       "end": "9:00",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "9:05",
-                      //       "end": "9:10",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "9:15",
-                      //       "end": "9:25",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "9:30",
-                      //       "end": "9:35",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "9:33",
-                      //       "end": "9:40",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "9:45",
-                      //       "end": "9:50",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "10:00",
-                      //       "end": "10:10",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "10:20",
-                      //       "end": "10:30",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },
-                      //     {
-                      //       "begin": "10:25",
-                      //       "end": "10:40",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     }
-                      //   ]
-                      // },
-                      // {
-                      //     "wo": "0000235990",
-                      //     "color": "#ffff99",
-                      //     "begin": "9:25",
-                      //     "end": "10:25",
-                      //     "qty": 2,
-                      //     "pauseList": [
-                      //     ]
-                      // },
-                      // {
-                      //     "wo": "0000235990",
-                      //     "color": "#ffff99",
-                      //     "begin": "10:21",
-                      //     "end": "11:25",
-                      //     "qty": 2,
-                      //     "pauseList": [
-                      //     {
-                      //       "begin": "10:25",
-                      //       "end": "10:40",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     },{
-                      //       "begin": "10:30",
-                      //       "end": "10:55",
-                      //       color: '#a22',
-                      //       code: 'a2'
-                      //     }
-                      //     ]
-                      // },
-                      // {
-                      //     "wo": "0000235990",
-                      //     "color": "#ffff99",
-                      //     "begin": "11:21",
-                      //     "end": "12:25",
-                      //     "qty": 2,
-                      //     "pauseList": [
-                      //     ]
-                      // },
-                      // {
-                      //     "wo": "0000235990",
-                      //     "color": "#ffff99",
-                      //     "begin": "12:21",
-                      //     "end": "13:25",
-                      //     "qty": 2,
-                      //     "pauseList": [
-                      //     ]
-                      // },{
-                      //     "wo": "0000235990",
-                      //     "color": "#ffff99",
-                      //     "begin": "13:21",
-                      //     "end": "14:25",
-                      //     "qty": 2,
-                      //     "pauseList": [
-                      //     ]
-                      // },{
-                      //     "wo": "0000235990",
-                      //     "color": "#ffff99",
-                      //     "begin": "14:21",
-                      //     "end": "15:25",
-                      //     "qty": 2,
-                      //     "pauseList": [
-                      //     ]
-                      // },
-                  ],
-                  "pauseReason": [
-                      {
-                          "code": "R1",
-                          "desc": "暂无原因",
-                          "color": "#330033"
-                      }
-                  ],
-                  "draw": {
-                      "uw": 1.7066666666666668,
-                      "fillrec": [
-                          {
-                              "w": 1286,
-                              "h": 24,
-                              "x": 343,
-                              "y": 30,
-                              "color": "#ffff99"
-                          }
-                      ],
-                      "text": [
-                          {
-                              "x": 983,
-                              "y": 34,
-                              "text": "2.000",
-                              "size": 16
-                          }
-                      ],
-                      "line": []
-                  }
-              }
-            }
     </script>
 </body>
 
