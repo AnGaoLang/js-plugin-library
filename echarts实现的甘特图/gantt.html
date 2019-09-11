@@ -399,14 +399,13 @@
                         // 但是实际的value和max却随之增加了 min * 堆叠柱状图数量 的值。故计算实际的max，需要减去 startMinute * length
                         // 重写max的函数
                         var getMaxFunc = function (length) {
-                          return function (value) {
-                              var startTime = toMinute(startHour + ':00');
-                              var currentMax = toMinute(data.Detail.bc_end) - startTime;
-                              if ((value.max - (startMinute * length))  > currentMax)  {
-                                return value.max // 图表中实际数据的最大值
-                              } else {
-                                return currentMax // 计划中的最大值
-                              }
+                          var startTime = toMinute(startHour + ':00');
+                          var currentMax = toMinute(data.Detail.bc_end) - startTime;
+                          var maxTime = toMinute('24:00') - startTime; // x轴最大刻度不超过24：00
+                          if ((value.max - (startMinute * length))  > currentMax)  {
+                            return value.max > maxTime ? maxTime : value.max  // 图表中实际数据的最大值
+                          } else {
+                            return currentMax // 计划中的最大值
                           }
                         };
                         var option = {
