@@ -314,3 +314,62 @@ function toTimeCount(start, end) {
   diffTime = diffTime - (difSecond * 60);
   return '倒计时：' + difDay + '天' + difHour + '时' + difSecond + '分' + diffTime + '秒';
 }
+
+// 依据绝对路径，将图片转为base64位码, 需要等图片加载完成后才将canvas 转为 base64 位码，否则会显示空白
+export const getBase64Image = (img, callback) => {
+  let canvas = document.createElement('canvas');
+  let ctx = canvas.getContext('2d');
+  let newImg = new Image();
+  newImg.src = img;
+  canvas.width = newImg.width;
+  canvas.height = newImg.height;
+  let ext = newImg.src.substring(newImg.src.lastIndexOf('.') + 1).toLowerCase();
+  newImg.onload = () => {
+    ctx && ctx.drawImage(newImg, 0, 0, newImg.width, newImg.height);
+    let dataURL = canvas.toDataURL(`image/${ext}`);
+    callback && callback(dataURL);
+  };
+}
+
+// 依据base64，计算图片大小
+function getImgSize (str) {
+  let base64 = str.split('base64,')[1];
+  let strLength = Number(base64.length);
+  let fileLength = parseInt((strLength - (strLength / 8) * 2).toFixed(2));
+  return parseInt((fileLength / 1024).toFixed(2));
+};
+
+// base64转blob
+function base64ToBlob (dataurl) {
+  let arr = dataurl.split(',');
+  let bstr = atob(arr[1]);
+  let n = bstr.length;
+  let u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], {type: 'image/jpeg'});
+}
+
+convertBase64UrlToBlob (urlData) {
+  var bytes = window.atob(urlData.split(",")[1]); //去掉url的头，并转换为byte
+  //处理异常,将ascii码小于0的转换为大于0
+  var ab = new ArrayBuffer(bytes.length);
+  var ia = new Uint8Array(ab);
+  for (var i = 0; i < bytes.length; i++) {
+    ia[i] = bytes.charCodeAt(i);
+  }
+  return new Blob([ab], { type: "image/jpeg" });
+}
+
+// bolb转file对象
+convertBlobUrlToFile (blob) {
+  return new File([blob], '1.jpg', {type: 'image/jpeg', lastModified: Date.now()});
+}
+
+// blob转base64
+blobToDataURL (blob, callback) {
+  let a = new FileReader();
+  a.onload = function (e) { callback(e.target.result); }
+  a.readAsDataURL(blob);
+}
