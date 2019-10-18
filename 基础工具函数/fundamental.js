@@ -240,6 +240,21 @@ function allSame (a) {
 function temString(template, data) {
   return template.replace(/\$\{(.*?)\}/g, (match, $1) => data[$1.trim()]); // $1依次匹配子表达式 (.*?)
 };
+function temString(template, data) {
+  return template.replace(/\$\{(.*?)\}/g, (match, $1) => {
+    if (~$1.indexOf('.')) {
+      let array = $1.split('.');
+      try {
+        let a = data[array[0].trim()][array[1].trim()]
+      } catch (e) {
+        console.log(e)
+      };
+      return data[array[0].trim()][array[1].trim()];
+    } else {
+      return data[$1.trim()]
+    }
+  });
+};
 
 // 获取url后面的参数
 function getParam (key) {
