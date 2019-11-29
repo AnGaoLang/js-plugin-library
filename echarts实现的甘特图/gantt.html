@@ -399,13 +399,15 @@
                         // 但是实际的value和max却随之增加了 min * 堆叠柱状图数量 的值。故计算实际的max，需要减去 startMinute * length
                         // 重写max的函数
                         var getMaxFunc = function (length) {
-                          var startTime = toMinute(startHour + ':00');
-                          var currentMax = toMinute(data.Detail.bc_end) - startTime;
-                          var maxTime = toMinute('24:00') - startTime; // x轴最大刻度不超过24：00
-                          if ((value.max - (startMinute * length))  > currentMax)  {
-                            return value.max > maxTime ? maxTime : value.max  // 图表中实际数据的最大值
-                          } else {
-                            return currentMax // 计划中的最大值
+                          return function (value) {
+                            var startTime = toMinute(startHour + ':00');
+                            var currentMax = toMinute(data.Detail.bc_end) - startTime;
+                            var maxTime = toMinute('24:00') - startTime; // x轴最大刻度不超过24：00
+                            if ((value.max - (startMinute * length))  > currentMax)  {
+                              return value.max > maxTime ? maxTime : value.max  // 图表中实际数据的最大值
+                            } else {
+                              return currentMax // 计划中的最大值
+                            }
                           }
                         };
                         var option = {
@@ -436,12 +438,17 @@
                                     fontSize: '18',
                                     color: '#1D92B6',
                                     formatter: function (value, index) {
-                                        var startTime = toMinute(startHour + ':00'); // 计划开始时间的整点
-                                        if (index == 0) {
-                                            return data.Detail.bc_begin // 第一个x轴刻度，显示计划开始时间
+                                      var startTime = toMinute(startHour + ':00'); // 计划开始时间的整点
+                                      if (index == 0) {
+                                          return data.Detail.bc_begin // 第一个x轴刻度，显示计划开始时间
+                                      } else {
+                                        var remainer = value % 60; // 如果被60整除，则显示整点，否则显示value
+                                        if (remainer == 0) {
+                                          return toMinuStr(startTime + 60 * index)
                                         } else {
-                                          return toMinuStr(startTime + 60 * index) // 整点label
+                                          return toMinuStr(value)
                                         }
+                                      }
                                     }
                                 }
                             },
