@@ -389,6 +389,70 @@ blobToDataURL (blob, callback) {
   a.readAsDataURL(blob);
 }
 
+/**
+ * 将树形数据结构展开为数组
+ * @param data
+ */
+export function treeToArray(data) {
+  let tmp = [];
+  Array.from(data).forEach((record) => {
+    tmp.push(record);
+    if (record.children && record.children.length > 0 && !record.meta.isleaf) {
+      const children = treeToArray(record.children);
+      tmp = tmp.concat(children);
+    }
+  });
+  return tmp;
+}
+
+/**
+ * 展开二维数组
+ */
+export function expandArray(array) {
+  return array.reduce((a, b) => a.concat(b))
+}
+
+/**
+ * 遍历树并返回结果
+ * @param tree
+ * @param callBack
+ */
+export function traverseTree(tree ,callBack, children = 'children') {
+  let temporaryVar = JSON.parse(JSON.stringify(tree));
+  const _recursive = (treeData) => {
+    if (!treeData || (treeData[children] && treeData[children].length == 0)) return;
+    for(let i = 0; i < treeData.length; i++) {
+      treeData[i] = callBack(treeData[i]);
+      _recursive(treeData[i][children]);
+    }
+  };
+  _recursive(temporaryVar);
+  return temporaryVar;
+}
+
+// 深拷贝
+export function deepClone(object) {
+	let result;
+	if (typeof object === 'object') {
+		if (object == null) {
+			return object;
+		} else if (Array.isArray(object)) {
+			result = [];
+			for (let i = 0; i < object.length; i++) {
+				result.push(deepClone(object[i]));
+			};
+		} else {
+			result = {};
+			for (let key in object) {
+				result[key] = deepClone(object[key]);
+			}
+		}
+	} else {
+		return object;
+	};
+	return result;
+}
+
 // 校验数据类型及深拷贝
 function  judgeType(obj) {
   // tostring会返回对应不同的标签的构造函数
@@ -409,4 +473,102 @@ function  judgeType(obj) {
     return 'element';
   }
   return map[toString.call(obj)];
+}
+
+/**
+ * Parse the time to string
+ * @param {(Object|string|number)} time
+ * @param {string} cFormat
+ * @returns {string}
+ */
+export function parseTime(time, cFormat) {
+  if (arguments.length === 0) {
+    return null;
+  }
+  const format = cFormat || '{y}-{m}-{d} {h}:{i}:{s}';
+  let date;
+  if (typeof time === 'object') {
+    date = time;
+  } else {
+    if ((typeof time === 'string') && (/^[0-9]+$/.test(time))) {
+      time = parseInt(time, 10);
+    }
+    if ((typeof time === 'number') && (time.toString().length === 10)) {
+      time *= 1000;
+    }
+    date = new Date(time);
+  }
+  const formatObj = {
+    y: date.getFullYear(),
+    m: date.getMonth() + 1,
+    d: date.getDate(),
+    h: date.getHours(),
+    i: date.getMinutes(),
+    s: date.getSeconds(),
+    a: date.getDay(),
+  };
+  const timeStr = format.replace(/{(y|m|d|h|i|s|a)+}/g, (result, key) => {
+    let value = formatObj[key];
+    // Note: getDay() returns 0 on Sunday
+    if (key === 'a') { return ['日', '一', '二', '三', '四', '五', '六'][value]; }
+    if (result.length > 0 && value < 10) {
+      value = `0${value}`;
+    }
+    return value || 0;
+  });
+  return timeStr;
+}
+
+export function splitDate(date, split = "-") {
+  if (!date) return '';
+  let dateTime = date;
+  if (typeof date == 'string') {
+    dateTime = new Date(dateTime);
+  };
+  const Y = dateTime.getFullYear() + split;
+  const M = (dateTime.getMonth() + 1 < 10 ? "0" + (dateTime.getMonth() + 1) : dateTime.getMonth() +
+    1) + split;
+  const D = dateTime.getDate() < 10 ? "0" + dateTime.getDate() : dateTime.getDate();
+  return Y + M + D;
+}
+
+/**
+ * @param {number} time
+ * @param {string} option
+ * @returns {string}
+ */
+export function formatTime(time, option) {
+  if ((`${time}`).length === 10) {
+    time = parseInt(time, 10) * 1000;
+  } else {
+    time = +time;
+  }
+  const d = new Date(time);
+  const now = Date.now();
+
+  const diff = (now - d) / 1000;
+  if (diff < 30) {
+    return '刚刚';
+  } if (diff < 3600) {
+    // less 1 hour
+    return `${Math.ceil(diff / 60)}分钟前`;
+  } if (diff < 3600 * 24) {
+    return `${Math.ceil(diff / 3600)}小时前`;
+  } if (diff < 3600 * 24 * 2) {
+    return '1天前';
+  }
+  if (option) {
+    return parseTime(time, option);
+  }
+  return (
+    `${d.getMonth()
+      + 1
+    }月${
+      d.getDate()
+    }日${
+      d.getHours()
+    }时${
+      d.getMinutes()
+    }分`
+  );
 }
