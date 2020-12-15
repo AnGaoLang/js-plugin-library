@@ -572,3 +572,28 @@ export function formatTime(time, option) {
     }分`
   );
 }
+
+// 函数防抖
+export function debounce(fun, time = 150) {
+  let timer;
+  return () => {
+    if (!!timer) {
+      clearTimeout(timer);
+      timer = null;
+    };
+    timer = setTimeout(fun, time);
+  }
+}
+
+// 函数节流
+export function throttle(fun, time = 150) {
+  let timer;
+  return () => {
+    if (!timer) {
+      timer = setTimeout(() => {
+        timer = null;
+        fun.apply(this, arguments)
+      }, time);
+    }
+  }
+}
