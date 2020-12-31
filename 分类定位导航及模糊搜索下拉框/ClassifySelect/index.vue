@@ -6,18 +6,18 @@
       :placeholder="placeholder"
       @click="toggle">
     <div class="icon-warp">
-      <i v-show="curValue" class="el-icon-circle-close" @click="clear"></i>
+      <i v-if="curValue" class="el-icon-circle-close" @click="clear"></i>
       <i class="el-icon-arrow-up"></i>
     </div>
-    <div v-show="visible" class="classify-options">
+    <div :class="['classify-options', visible ? 'show' : 'hide']">
       <div class="search-input">
         <input type="text" v-model="searchValue" placeholder="输入并搜索" @input="search">
         <div class="icon-warp">
           <i v-if="!searchValue" class="el-icon-search"></i>
-          <i v-else class="el-icon-circle-close" @click="searchValue = ''"></i>
+          <i v-else class="el-icon-circle-close" @click.stop="clearSearch"></i>
         </div>
       </div>
-      <div class="labels-head" @click="clickHead">
+      <div v-if="!searchValue" class="labels-head" @click="clickHead">
         <span v-for="(item, index) in options" 
           :key="`head${index}`"
           :style="{'width': `${100 / options.length}%`}"
@@ -27,14 +27,16 @@
       <div class="options-warp" @scroll="scrollOptions" @click="clickOption">
         <div class="divide-wrap" v-for="(item, index) in options" 
           :key="`divideWrap${index}`">
-          <div class="divide-title">{{item.divide}}</div>
+          <div v-if="item.divide" class="divide-title">{{item.divide}}</div>
           <ul>
             <li v-for="(option, optionIndex) in item.list" 
               :key="`option${optionIndex}`"
               :class="{'select': option.value == curValue}"
-              :data-label="option.label"
               :data-value="option.value">{{option.label}}</li>
           </ul>
+        </div>
+        <div class="options-warp no-data" v-if="!options || options.length == 0">
+          暂无数据...
         </div>
       </div>
     </div>
@@ -47,8 +49,46 @@
       event: 'change'
     },
     props: {
-      placeholder: String,
-      value: String | Number
+      placeholder: {
+        type: String,
+        default: '请选择'
+      },
+      value: String | Number,
+      list: {
+        type: Array,
+        default: () => []
+      }
+      // [
+      //     {
+      //       divide: '生产数据',
+      //       list: [
+      //         {
+      //           label: '生产数据1',
+      //           value: 1
+      //         },
+      //         {
+      //           label: '生产数据2',
+      //           value: 2
+      //         },
+      //         {
+      //           label: '生产数据3',
+      //           value: 3
+      //         },
+      //         {
+      //           label: '生产数据4',
+      //           value: 4
+      //         },
+      //         {
+      //           label: '生产数据5',
+      //           value: 5
+      //         },
+      //         {
+      //           label: '生产数据6',
+      //           value: 6
+      //         }
+      //       ]
+      //     },
+      // ]
     },
     data() {
       return {
@@ -59,163 +99,8 @@
         scrollHeight: 0,
         curValue: this.value,
         searchValue: '',
-        options: [
-          {
-            divide: '生产数据',
-            offsetTop: 0,
-            select: true,
-            list: [
-              {
-                label: '生产数据1',
-                value: 1
-              },
-              {
-                label: '生产数据2',
-                value: 2
-              },
-              {
-                label: '生产数据3',
-                value: 3
-              },
-              {
-                label: '生产数据4',
-                value: 4
-              },
-              {
-                label: '生产数据5',
-                value: 5
-              },
-              {
-                label: '生产数据6',
-                value: 6
-              }
-            ]
-          },
-          {
-            divide: '批次标准',
-            offsetTop: 0,
-            select: false,
-            list: [
-              {
-                label: '批次标准1',
-                value: 11
-              },
-              {
-                label: '批次标准2',
-                value: 21
-              },
-              {
-                label: '批次标准3',
-                value: 31
-              },
-              {
-                label: '批次标准4',
-                value: 41
-              },
-              {
-                label: '批次标准5',
-                value: 51
-              },
-              {
-                label: '批次标准6',
-                value: 61
-              }
-            ]
-          },
-          {
-            divide: '批次标准1',
-            offsetTop: 0,
-            select: false,
-            list: [
-              {
-                label: '批次标准1',
-                value: 111
-              },
-              {
-                label: '批次标准2',
-                value: 211
-              },
-              {
-                label: '批次标准3',
-                value: 311
-              },
-              {
-                label: '批次标准4',
-                value: 411
-              },
-              {
-                label: '批次标准5',
-                value: 511
-              },
-              {
-                label: '批次标准6',
-                value: 611
-              }
-            ]
-          },
-          {
-            divide: '批次标准2',
-            offsetTop: 0,
-            select: false,
-            list: [
-              {
-                label: '批次标准1',
-                value: 112
-              },
-              {
-                label: '批次标准2',
-                value: 212
-              },
-              {
-                label: '批次标准3',
-                value: 312
-              },
-              {
-                label: '批次标准4',
-                value: 412
-              },
-              {
-                label: '批次标准5',
-                value: 512
-              },
-              {
-                label: '批次标准6',
-                value: 612
-              }
-            ]
-          },
-          {
-            divide: '批次标准3',
-            offsetTop: 0,
-            select: false,
-            list: [
-              {
-                label: '批次标准1',
-                value: 113
-              },
-              {
-                label: '批次标准2',
-                value: 213
-              },
-              {
-                label: '批次标准3',
-                value: 313
-              },
-              {
-                label: '批次标准4',
-                value: 413
-              },
-              {
-                label: '批次标准5',
-                value: 513
-              },
-              {
-                label: '批次标准6',
-                value: 613
-              }
-            ]
-          }
-        ],
+        cacheOptions: null,
+        options: [],
       }
     },
     mounted() {
@@ -241,17 +126,18 @@
                 let offsetTop = domList[i].offsetTop;
                 this.options[i].offsetTop = offsetTop + 30;
               };
+              this.cacheOptions = JSON.parse(JSON.stringify(this.options));
               this.getDivideOffsetTop = true;
             }
           })
+        } else {
+          this.clearSearch();
         }
-      },
-      hideOptios() {
-        this.visible = false;
       },
       getLabel(value) {
         let label = '';
-        this.options.forEach(item => {
+        let list = this.cacheOptions || this.options;
+        list.forEach(item => {
           let exit = false;
           item.list.forEach(option => {
             if (option.value == value) {
@@ -263,13 +149,6 @@
           if (exit) return;
         });
         return label
-      },
-      clear() {
-        let wrap = document.querySelector('.options-warp');
-        wrap.scrollTop = 0;
-        this.curValue = '';
-        this.$emit('change', this.curValue);
-        this.hideOptios();
       },
       clickHead(event) {
         let target = event.target;
@@ -307,6 +186,7 @@
         };
       },
       scrollOptions(event) {
+        if (this.searchValue) return;
         let target = event.target;
         let offsetHeight = target.offsetHeight;
         let scrollTop = target.scrollTop;
@@ -321,16 +201,68 @@
             nextOption.select = true;
           }
         };
+        console.log(this.options)
+      },
+      clearSearch() {
+        this.searchValue = '';
+        this.options = JSON.parse(JSON.stringify(this.cacheOptions));
+      },
+      hideOptios() {
+        if (this.visible) {
+          this.visible = false;
+          this.clearSearch();
+        }
       },
       search() {
-        console.log(this.searchValue)
-      }
+        if (!this.searchValue) {
+          this.clearSearch();
+          return;
+        };
+        let result = [];
+        this.options.forEach(item => {
+          let array = [];
+          item.list.forEach(option => {
+            if (option.label.indexOf(this.searchValue) > -1) {
+              if (!array[0]) {
+                array[0] = {
+                  divide: item.divide,
+                  list: [],
+                }
+              };
+              array[0].list.push(option);
+            }
+          });
+          result = result.concat(array);
+        });
+        console.log(result)
+        this.options = result;
+      },
+      clear() {
+        let wrap = document.querySelector('.options-warp');
+        wrap.scrollTop = 0;
+        this.curValue = '';
+        this.$emit('change', this.curValue);
+        this.hideOptios();
+      },
     },
     watch: {
       value(newValue, oldValue) {
         if (newValue != oldValue) {
           this.curValue = newValue;
         }
+      },
+      list: {
+        immediate: true,
+        handler(newValue) {
+          newValue.forEach((item, index) => {
+            item.select = (index == 0);
+            item.offsetTop = 0;
+          });
+          console.log(newValue)
+          this.options = JSON.parse(JSON.stringify(newValue));
+          this.getDivideOffsetTop = false;
+          this.visible = false;
+        },
       }
     }
   }
@@ -395,6 +327,19 @@ input {
   background: #fff;
   border-radius: 4px;
   user-select: none;
+  transition: 0.2s;
+  transform-origin: top center;
+  overflow: hidden;
+  &.show {
+    // height: 383px;
+    opacity: 1;
+    transform: scaley(1);
+  }
+  &.hide {
+    //  height: 0;
+    transform: scaley(0);
+     opacity: 0;
+  }
   .search-input {
     position: relative;
     width: 100%;
@@ -429,6 +374,11 @@ input {
   line-height: 30px;
   overflow-y: auto;
   position: relative;
+  &.no-data {
+    height: 150px;
+    padding-top: 50px;
+    text-align: center;
+  }
   .divide-wrap {
     .divide-title {
       font-size: 16px;
