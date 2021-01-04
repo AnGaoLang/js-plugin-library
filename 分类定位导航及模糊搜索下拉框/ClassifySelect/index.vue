@@ -21,11 +21,12 @@
         <span v-for="(item, index) in options" 
           :key="`head${index}`"
           :style="{'width': `${100 / options.length}%`}"
-          :data-offsetTop="item.offsetTop"
+          :data-offsettop="item.offsetTop"
           :class="[item.select && 'select']">{{item.divide}}</span>
       </div>
-      <div class="options-warp" @scroll="scrollOptions" @click="clickOption">
-        <div class="divide-wrap" v-for="(item, index) in options" 
+      <div class="options-warp" ref="optionsWarp" @scroll="scrollOptions" @click="clickOption">
+        <div class="divide-wrap" ref="divideWrap"
+          v-for="(item, index) in options" 
           :key="`divideWrap${index}`">
           <div v-if="item.divide" class="divide-title">{{item.divide}}</div>
           <ul>
@@ -35,7 +36,7 @@
               :data-value="option.value">{{option.label}}</li>
           </ul>
         </div>
-        <div class="options-warp no-data" v-if="!options || options.length == 0">
+        <div v-if="!options || options.length == 0" class="options-warp no-data">
           暂无数据...
         </div>
       </div>
@@ -114,14 +115,16 @@
         this.visible = !this.visible;
         if (this.visible) {
           this.$nextTick(() => {
-            let optionsWrap = document.querySelector('.options-warp');
+            // 用dom获取节点，当页面有多个组件实例时，或获多个组件实例的dom，这里需要通过ref将获取的dom封装在组件实例之内
+            let optionsWrap = this.$refs.optionsWarp;
             if (this.curValue) {
-              let curSelected = document.querySelector(`li[data-value='${this.curValue}']`);
+              let curSelected = optionsWrap.querySelector(`li[data-value='${this.curValue}']`);
               optionsWrap.scrollTop = curSelected.offsetTop - 100;
             };
             if (!this.getDivideOffsetTop) {
-              let domList = document.querySelectorAll('.divide-wrap');
+              let domList = this.$refs.divideWrap;
               this.scrollHeight = optionsWrap.scrollHeight;
+              console.log(this.scrollHeight)
               for(let i = 0; i < domList.length; i++){
                 let offsetTop = domList[i].offsetTop;
                 this.options[i].offsetTop = offsetTop + 30;
@@ -151,10 +154,18 @@
         return label
       },
       clickHead(event) {
-        let target = event.target;
-        let offsetTop = target.getAttribute('data-offsetTop');
-        offsetTop = offsetTop - 30;
-        let wrap = document.querySelector('.options-warp');
+        let path = event.path;
+        let target;
+        path.forEach(item => {
+          if (item.nodeName == 'SPAN') {
+            target = item;
+            return;
+          }
+        });
+        // let target = event.currentTarget;
+        let dataOffsetTop = target.getAttribute('data-offsettop');
+        let offsetTop = dataOffsetTop - 30;
+        let wrap = this.$refs.optionsWarp;
         let instance = parseInt(offsetTop - wrap.scrollTop);
         if (instance == 0) return;
         if (this.debounce) {
@@ -165,7 +176,7 @@
         };
         this.debounce = setTimeout(() => {
           this.timer = setInterval(() => {
-            if ((instance > 0 && (wrap.scrollTop >= offsetTop || wrap.scrollTop >= (this.scrollHeight - 300))) || 
+            if ((instance > 0 && (wrap.scrollTop >= offsetTop || wrap.scrollTop >= (this.scrollHeight - 310))) || 
               (instance < 0 && wrap.scrollTop <= offsetTop)) {
               wrap.scrollTop = offsetTop;
               clearInterval(this.timer);
@@ -176,9 +187,21 @@
             wrap.scrollTop = wrap.scrollTop + (instance / 10);
           }, 20);
         }, 200);
+        console.log(this.timer)
       },
       clickOption(event) {
-        let value = event.target.getAttribute('data-value');
+        // 当页面被翻译时，会自动插入font标签，这是event.target获取的是插入的font标签
+        // 可以遍历path拿到最近的非font标签
+        let path = event.path;
+        let target;
+        path.forEach(item => {
+          if (item.nodeName == 'LI') {
+            target = item;
+            return;
+          }
+        });
+        if (!target) return;
+        let value = target.getAttribute('data-value');
         if (value) {
           this.curValue = value;
           this.$emit('change', this.curValue);
@@ -187,7 +210,7 @@
       },
       scrollOptions(event) {
         if (this.searchValue) return;
-        let target = event.target;
+        let target = event.currentTarget;
         let offsetHeight = target.offsetHeight;
         let scrollTop = target.scrollTop;
         this.options.forEach(item => (item.select = false));
@@ -201,7 +224,6 @@
             nextOption.select = true;
           }
         };
-        console.log(this.options)
       },
       clearSearch() {
         this.searchValue = '';
@@ -238,7 +260,7 @@
         this.options = result;
       },
       clear() {
-        let wrap = document.querySelector('.options-warp');
+        let wrap = this.$refs.optionsWarp;
         wrap.scrollTop = 0;
         this.curValue = '';
         this.$emit('change', this.curValue);
