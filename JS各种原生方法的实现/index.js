@@ -37,5 +37,8 @@ Function.prototype.myBind = function(object) {
 Object.prototype.myInstanceof = function(object) {
   if (!object || typeof object !== 'object') return false;
   const context = object|| window;
-
+  let proto = Object.getPrototypeOf(this);
+  white(true) {
+    
+  }
 }
