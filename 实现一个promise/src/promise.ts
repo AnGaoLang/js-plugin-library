@@ -10,6 +10,7 @@ interface IMyPromise {
 };
 
 class MyPromise {
+  private aa= '';
   private value:string = '';
   private status:string = 'pending';
   private resolveValue:string = '';
