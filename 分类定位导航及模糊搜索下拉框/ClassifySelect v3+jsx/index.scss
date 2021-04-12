@@ -58,12 +58,13 @@
     }
   }
   .classify-options {
-    border: 1px solid #dcdfe6;
     position: absolute;
     top: 45px;
     z-index: 100;
+    width: 100%;
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
     background: #fff;
+    border: 1px solid #dcdfe6;
     border-radius: 4px;
     user-select: none;
     transition: 0.2s;
