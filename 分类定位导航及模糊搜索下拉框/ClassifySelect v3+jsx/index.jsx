@@ -38,13 +38,21 @@ export default defineComponent({
   setup(props, { attrs, slots, emit }) {
     const visible = ref(false)
     const list = ref([])
+
     const curValue = ref(props.modelValue)
+    watch(() => props.modelValue, newVal => {
+      if (!newVal) {
+        curValue.value = ''
+        emit('update:modelValue', '', {})
+      }
+    })
+
     const curData = computed(() => {
-      let filter = null
+      let filter = {}
       if (list.value) {
         filter = list.value.filter(item => item.value == curValue.value)
       }
-      return filter && filter.length ? filter[0] : null
+      return filter && filter.length ? filter[0] : {}
     })
     let optionRef
     const getOptionRef = (el) => { optionRef = el }
@@ -137,6 +145,7 @@ export default defineComponent({
     }
     const clear = () => {
       this.curValue = ''
+      this.$emit('update:modelValue', '', {})
       this.reset()
     }
     const selectOption = (val) => {
